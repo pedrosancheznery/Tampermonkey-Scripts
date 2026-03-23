@@ -1,19 +1,20 @@
 // ==UserScript==
 // @name         Submit Scannable IDs in FROST
 // @namespace    HOU3
-// @version      1.1.2
+// @version      1.1.3
 // @author       Pedro Sanchez (pefsanch)
 // @description  Read scannable IDs from user input and submit them to a form
 // @match        https://frost-prod-jlb-iad.iad.proxy.amazon.com/packnhold/create
 // @grant        GM.xmlHttpRequest
 // @grant        GM_addStyle
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=amazon.com
-// @homepage     https://github.com/pedrosancheznery/Tampermonkey-Scripts/blob/main/Submit%20Scannable%20IDs%20in%20FROST.user.js
+// @homepage     https://github.com/pedrosancheznery/Tampermonkey-Scripts/
 // @updateURL    https://raw.githubusercontent.com/pedrosancheznery/Tampermonkey-Scripts/main/Submit%20Scannable%20IDs%20in%20FROST.user.js
 // ==/UserScript==
 
 (function() {
     'use strict';
+
     // Add CSS for the new table
     GM_addStyle(`
         #tote-log-container {
@@ -32,7 +33,7 @@
         }
         #tote-log-container h4 {
             margin: 0 0 10px;
-            font-size: 12px;
+            font-size: 8px;
             text-align: center;
         }
         #tote-error-log-table {
@@ -91,11 +92,13 @@
             <td>${isSuccess ? '✔️' : '❌'}</td>
         `;
         tableBody.prepend(newRow); // Add to the top of the table
+		updateStats();
     }
 
-    let toteLogTableBody;
-    let ErrorToteLogTableBody;
-    let toteId;
+    let toteLogTableBody, ErrorToteLogTableBody;
+    let toteId, statsEl;
+    let successCount = 0;
+    let failCount = 0;
     
     // paste into a specific textarea element
     async function pasteIntoTextarea(textarea) {  
@@ -151,10 +154,22 @@
         spacer.style.margin = "5px";
         spacer.style.padding = "5px";
         modal.appendChild(spacer);
+        
+        countEl = document.createElement("div");
+        countEl.style.cssText = "font-size:12px;color:#888;margin-bottom:4px;";
+        countEl.textContent = "0 / 0";
+        //modal.appendChild(countEl);
+    
+        statsEl = document.createElement("div");
+        statsEl.style.cssText = "font-size:12px;color:#888;margin-bottom:14px;";
+        statsEl.textContent = "✅ 0 | ❌ 0";
+        modal.appendChild(statsEl);
+
+        modal.appendChild(spacer);
 
         const submitButton = document.createElement('button');
-        submitButton.innerText = "Process";
-        submitButton.style = "width: 100%; padding: 10px; cursor: pointer; background: #28a745; color: white; border: none; border-radius: 4px; font-weight: bold;";
+        submitButton.innerText = "▶ Process";
+        submitButton.style = "width: 70%; padding: 10px; cursor: pointer; background: #28a745; color: white; border: none; border-radius: 4px; font-weight: bold;";
         submitButton.onclick = () => {
             // Split input by newline and trim whitespace
             const ids = input.value.split('\n').map(id => id.trim()).filter(id => id); // Clean and filter
@@ -164,8 +179,8 @@
         modal.appendChild(submitButton);
 
         const clearButton = document.createElement('button');
-        clearButton.style = "width: 100%; padding: 10px; cursor: pointer; background: #cc0000; color: white; border: none; border-radius: 4px; font-weight: bold;";
-        clearButton.innerText = "Clear Contents";
+        clearButton.style = "width: 30%; padding: 10px; cursor: pointer; background: #cc0000; color: white; border: none; border-radius: 4px; font-weight: bold;";
+        clearButton.innerText = "Clear";
         clearButton.onclick = () => {
             document.getElementById("scannableIdsInput").value = ""
             document.getElementById("tote-error-log-table-body").innerHTML = ""
@@ -182,6 +197,12 @@
         document.body.appendChild(modal);
         console.log("Submit Scannable IDs in FROST Script Started")
         return modal;
+    }
+
+    function updateStats() {
+        if (statsEl) {
+          statsEl.textContent = "✅ " + successCount + " | ❌ " + failCount;
+        }
     }
 
     // Function to submit scannable IDs
@@ -238,6 +259,7 @@
                     clearInterval(interval); // Stop polling
                     console.log('Message changed!'); // For debugging
                     if (errorMessage.innerText != '') {
+						failCount++;
                         addErrorLogRow(ErrorToteLogTableBody, toteId, "Stow", "-", 0);
                         console.log(`Error Message: ${errorMessage.innerText}`);
                         resolve(false);
@@ -267,6 +289,7 @@
             const toteId = match[2];
             const disposition = match[3];
             if (!isNaN(itemCount)) {
+				successCount++;
                 //errorProcessed = false; // Reset error processed flag on new success message
                 addErrorLogRow(ErrorToteLogTableBody, toteId, disposition, itemCount, 1);
             }
@@ -279,6 +302,3 @@
     createModal();
     $("#scannableIds").focus();
 })();
-
-
-
