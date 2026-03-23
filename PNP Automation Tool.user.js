@@ -301,8 +301,8 @@
             let realReason = '';
             const h4 = modalEl.querySelector('h4');
             if (h4) reason = h4.textContent.trim();
-            reason.match(emptyregex);
-            let match = reason.match(regex);
+            //reason.match(emptyregex);
+            let match = reason.match(emptyregex);
             if ( match ) {
                 console.log('Matched:' , match[1]);
                 realReason = match[1];
