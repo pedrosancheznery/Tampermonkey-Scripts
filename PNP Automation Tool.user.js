@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         PNP Automation Tool
 // @namespace    HOU3
-// @version      1.4.8.4
+// @version      1.4.8.6
 // @description  Automate palletization by processing a list of IDs via the PNP tool logic; logs unprocessed totes and continues on error modals
 // @author       Pedro Sanchez (pefsanch)
 // @match        https://pnp-iad.aka.amazon.com/pnp
@@ -296,7 +296,7 @@
 
             // Reason extraction: h4 or errorMessageHeader/NextStep
             const emptyregex = /Error\s+is\b[^:]*:\s*(Container is empty)/;
-            const palletizedregex = /Error\s+is\b[^:]*:\s*(PALLETIZED)/;
+            const palletizedregex = /Error\s+is\b[^:]*:\s*(?:The tote status is\s+)?([A-Z]+)/;
             let reason = '';
             let realReason = '';
             const h4 = modalEl.querySelector('h4');
@@ -307,13 +307,14 @@
                 console.log('Matched:' , match[1]);
                 realReason = match[1];
                 reason = realReason;
-            }
-            reason.match(palletizedregex);
-            match = reason.match(regex);
-            if ( match ) {
-                console.log('Matched:' , match[1]);
-                realReason = match[1];
-                reason = realReason;
+            } else {
+                reason.match(palletizedregex);
+                match = reason.match(regex);
+                if ( match ) {
+                    console.log('Matched:' , match[1]);
+                    realReason = match[1];
+                    reason = realReason;
+                }
             }
             const headerDiv = modalEl.querySelector('.errorMessageHeader');
             if (!reason && headerDiv) reason = headerDiv.textContent.trim();
