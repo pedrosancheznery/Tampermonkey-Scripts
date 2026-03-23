@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Submit Scannable IDs in FROST
 // @namespace    HOU3
-// @version      1.0
+// @version      1.1
 // @author       Pedro Sanchez (pefsanch)
 // @description  Read scannable IDs from user input and submit them to a form
 // @match        https://frost-prod-jlb-iad.iad.proxy.amazon.com/packnhold/create
@@ -9,7 +9,7 @@
 // @grant        GM_addStyle
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=amazon.com
 // @homepage     https://github.com/pedrosancheznery/Tampermonkey-Scripts/blob/main/Submit%20Scannable%20IDs%20in%20FROST.user.js
-// @updateURL    https://github.com/pedrosancheznery/Tampermonkey-Scripts/blob/main/Submit%20Scannable%20IDs%20in%20FROST.user.js
+// @updateURL    https://raw.githubusercontent.com/pedrosancheznery/Tampermonkey-Scripts/main/Submit%20Scannable%20IDs%20in%20FROST.user.js
 // ==/UserScript==
 
 (function() {
@@ -96,7 +96,17 @@
     let toteLogTableBody;
     let ErrorToteLogTableBody;
     let toteId;
-
+    
+    // paste into a specific textarea element
+    async function pasteIntoTextarea(textarea) {  
+        try {    
+            const text = await navigator.clipboard.readText(); // requires HTTPS and user gesture    
+            textarea.value = text;  
+        } catch (err) {    
+            console.error('Clipboard read failed:', err);  
+        }
+    }
+    
     // Create the modal for user input
     function createModal() {
         const modal = document.createElement('div');
@@ -119,9 +129,14 @@
         header.innerHTML = '<b style="display:block; margin-bottom:5px;">Bulk Tote Pack And Hold</b>';
         modal.appendChild(header);
 
-        //const label = document.createElement('label');
-        //label.placeholder = "Enter Scannable IDs (one per line):";
-        //modal.appendChild(label);
+        const pasteButton = document.createElement('button');
+        pasteButton.innerText = "Process";
+        pasteButton.style = "width: 100%; padding: 10px; cursor: pointer; background: #0078d4; color: white; border: none; border-radius: 4px; font-weight: bold;";
+        pasteButton.onclick = () => {
+            const ta = document.getElementById('scannableIdsInput');
+            pasteIntoTextarea(ta);
+        };
+        modal.appendChild(pasteButton);
 
         const input = document.createElement('textarea');
         input.id = 'scannableIdsInput';
