@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         PNP Automation Tool
 // @namespace    HOU3
-// @version      1.0
+// @version      1.1
 // @description  Automate palletization by processing a list of IDs via the PNP tool logic
 // @author       Pedro Sanchez (pefsanch)
 // @match        https://pnp-iad.aka.amazon.com/pnp
