@@ -33,7 +33,7 @@
         }
         #tote-log-container h4 {
             margin: 0 0 10px;
-            font-size: 8px;
+            font-size: 10px;
             text-align: center;
         }
         #tote-error-log-table {
@@ -44,6 +44,7 @@
             border: 1px solid #ddd;
             padding: 8px;
             text-align: left;
+			font-size: 8px;
         }
         #tote-error-log-table thead tr {
             background-color: #003399;
@@ -169,7 +170,7 @@
 
         const submitButton = document.createElement('button');
         submitButton.innerText = "▶ Process";
-        submitButton.style = "width: 70%; padding: 10px; cursor: pointer; background: #28a745; color: white; border: none; border-radius: 4px; font-weight: bold;";
+        submitButton.style = "width: 60%; padding: 10px; cursor: pointer; background: #28a745; color: white; border: none; border-radius: 4px; font-weight: bold;";
         submitButton.onclick = () => {
             // Split input by newline and trim whitespace
             const ids = input.value.split('\n').map(id => id.trim()).filter(id => id); // Clean and filter
@@ -179,11 +180,13 @@
         modal.appendChild(submitButton);
 
         const clearButton = document.createElement('button');
-        clearButton.style = "width: 30%; padding: 10px; cursor: pointer; background: #cc0000; color: white; border: none; border-radius: 4px; font-weight: bold;";
+        clearButton.style = "width: 30%; padding: 10px; cursor: pointer; background: #cc0000; color: white; border: none; border-radius: 4px; font-weight: bold; margin-left: 10px";
         clearButton.innerText = "Clear";
         clearButton.onclick = () => {
             document.getElementById("scannableIdsInput").value = ""
             document.getElementById("tote-error-log-table-body").innerHTML = ""
+			successCount = 0 
+			failCount = 0
         }; // Clear contents
         modal.appendChild(clearButton);
 
