@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         PNP Automation Tool
 // @namespace    HOU3
-// @version      1.4.5
+// @version      1.4.6
 // @description  Automate palletization by processing a list of IDs via the PNP tool logic; logs unprocessed totes and continues on error modals
 // @author       Pedro Sanchez (pefsanch)
 // @match        https://pnp-iad.aka.amazon.com/pnp
@@ -97,7 +97,12 @@
     async function handleProcessClick(textarea, paxInput, statusDiv) {
         const lines = textarea.value.split('\n').map(l => l.trim()).filter(l => l.length > 0);
         const status = statusDiv;
+        const table = document.getElementById('unprocessed-totes-table');
+        if (!table) return;
+        const tbody = table.querySelector('tbody');
+
         let i = 0;
+        tbody.innerHTML = '';
 
         if (lines.length === 0) return alert("Please enter at least one ID.");
 
