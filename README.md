@@ -1,5 +1,3 @@
-I’ll generate a properly formatted README.md file content with Markdown headers. Save the text below into README.md.
-
 # Tampermonkey-Scripts
 
 A collection of useful Tampermonkey userscripts by Pedro Sanchez (pefsanch), including "Extract Scannable IDs in FCResearch" which extracts scannable container IDs from a table and copies them to the clipboard.
