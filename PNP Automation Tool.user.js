@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         PNP Automation Tool
 // @namespace    HOU3
-// @version      1.4.7.0
+// @version      1.4.7.2
 // @description  Automate palletization by processing a list of IDs via the PNP tool logic; logs unprocessed totes and continues on error modals
 // @author       Pedro Sanchez (pefsanch)
 // @match        https://pnp-iad.aka.amazon.com/pnp
@@ -151,7 +151,7 @@
             }
 
             // Optional delay between items
-            await new Promise(r => setTimeout(r, 1000));
+            await new Promise(r => setTimeout(r, 500));
         }
 
         textarea.value = "";
@@ -302,14 +302,14 @@
             const h4 = modalEl.querySelector('h4');
             if (h4) reason = h4.textContent.trim();
             reason.match(emptyregex);
-            const match = reason.match(regex);
+            let match = reason.match(regex);
             if ( match ) {
                 console.log('Matched:' , match[1]);
                 realReason = match[1];
                 reason = realReason;
             }
             reason.match(palletizedregex);
-            const match = reason.match(regex);
+            match = reason.match(regex);
             if ( match ) {
                 console.log('Matched:' , match[1]);
                 realReason = match[1];
