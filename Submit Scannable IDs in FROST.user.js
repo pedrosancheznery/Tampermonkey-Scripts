@@ -155,7 +155,7 @@
         spacer.style.padding = "5px";
         modal.appendChild(spacer);
         
-        countEl = document.createElement("div");
+        const countEl = document.createElement("div");
         countEl.style.cssText = "font-size:12px;color:#888;margin-bottom:4px;";
         countEl.textContent = "0 / 0";
         //modal.appendChild(countEl);
@@ -302,3 +302,4 @@
     createModal();
     $("#scannableIds").focus();
 })();
+
