@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Submit Scannable IDs in FROST
-// @namespace    http://tampermonkey.net/
+// @namespace    HOU3
 // @version      1.0
 // @author       Pedro Sanchez (pefsanch)
 // @description  Read scannable IDs from user input and submit them to a form
@@ -8,6 +8,8 @@
 // @grant        GM.xmlHttpRequest
 // @grant        GM_addStyle
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=amazon.com
+// @homepage     https://github.com/pedrosancheznery/Tampermonkey-Scripts/blob/main/Submit%20Scannable%20IDs%20in%20FROST.user.js
+// @updateURL    https://github.com/pedrosancheznery/Tampermonkey-Scripts/blob/main/Submit%20Scannable%20IDs%20in%20FROST.user.js
 // ==/UserScript==
 
 (function() {

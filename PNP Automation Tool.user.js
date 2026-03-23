@@ -1,11 +1,13 @@
 // ==UserScript==
 // @name         PNP Automation Tool
-// @namespace    http://tampermonkey.net
+// @namespace    HOU3
 // @version      1.0
 // @description  Automate palletization by processing a list of IDs via the PNP tool logic
 // @author       Pedro Sanchez (pefsanch)
 // @match        https://pnp-iad.aka.amazon.com/pnp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=amazon.com
+// @homepage     https://github.com/pedrosancheznery/Tampermonkey-Scripts/blob/main/PNP%20Automation%20Tool.user.js
+// @updateURL    https://github.com/pedrosancheznery/Tampermonkey-Scripts/blob/main/PNP%20Automation%20Tool.user.js
 // @grant        none
 // ==/UserScript==
 
