@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Submit Scannable IDs in FROST
 // @namespace    HOU3
-// @version      1.1.3
+// @version      1.1.4
 // @author       Pedro Sanchez (pefsanch)
 // @description  Read scannable IDs from user input and submit them to a form
 // @match        https://frost-prod-jlb-iad.iad.proxy.amazon.com/packnhold/create
@@ -27,7 +27,7 @@
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
             font-family: sans-serif;
-            font-size: 8px;
+            font-size: 9px;
             padding: 10px;
             z-index: 10000;
         }
@@ -44,7 +44,7 @@
             border: 1px solid #ddd;
             padding: 8px;
             text-align: left;
-			font-size: 8px;
+			font-size: 9px;
         }
         #tote-error-log-table thead tr {
             background-color: #003399;
@@ -187,6 +187,7 @@
             document.getElementById("tote-error-log-table-body").innerHTML = ""
 			successCount = 0 
 			failCount = 0
+			updateStats()
         }; // Clear contents
         modal.appendChild(clearButton);
 
