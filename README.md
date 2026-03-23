@@ -51,8 +51,10 @@ https://github.com/pedrosancheznery/Tampermonkey-Scripts
 - If `navigator.clipboard.writeText` fails, the script falls back to a textarea + `document.execCommand('copy')`.  
 - Clipboard operations require a user interaction (click) due to browser security restrictions.
 
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+
 ## License
-Choose a license (e.g., MIT) and add a LICENSE file to the repository.
+This project is licensed under the GNU General Public License v3.0 — see the [LICENSE](./LICENSE) file for details.
 
 ## Contact
 Pedro Sanchez Nery — (pefsanch) (use GitHub issues or PRs for feedback).
