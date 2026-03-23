@@ -7,8 +7,8 @@
 // @match        https://qi-fcresearch-na.corp.amazon.com/HOU3/*
 // @match        https://fcresearch-na.aka.amazon.com/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=amazon.com
-// @homepage     https://github.com/pedrosancheznery/Tampermonkey-Scripts/blob/main/Submit%20Scannable%20IDs%20in%20FROST.user.js
-// @updateURL    https://github.com/pedrosancheznery/Tampermonkey-Scripts/blob/main/Submit%20Scannable%20IDs%20in%20FROST.user.js
+// @homepage     https://github.com/pedrosancheznery/Tampermonkey-Scripts/blob/main/Extract%20Scannable%20IDs%20in%20FCResearch%20(Copy%20to%20Clipboard).user.js
+// @updateURL    https://github.com/pedrosancheznery/Tampermonkey-Scripts/blob/main/Extract%20Scannable%20IDs%20in%20FCResearch%20(Copy%20to%20Clipboard).user.js
 // @grant        none
 // ==/UserScript==
 
