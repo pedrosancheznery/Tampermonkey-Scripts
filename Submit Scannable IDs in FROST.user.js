@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Submit Scannable IDs in FROST
 // @namespace    HOU3
-// @version      1.1
+// @version      1.1.2
 // @author       Pedro Sanchez (pefsanch)
 // @description  Read scannable IDs from user input and submit them to a form
 // @match        https://frost-prod-jlb-iad.iad.proxy.amazon.com/packnhold/create
@@ -130,7 +130,7 @@
         modal.appendChild(header);
 
         const pasteButton = document.createElement('button');
-        pasteButton.innerText = "Process";
+        pasteButton.innerText = "Paste";
         pasteButton.style = "width: 100%; padding: 10px; cursor: pointer; background: #0078d4; color: white; border: none; border-radius: 4px; font-weight: bold;";
         pasteButton.onclick = () => {
             const ta = document.getElementById('scannableIdsInput');
