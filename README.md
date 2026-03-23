@@ -55,6 +55,5 @@ https://github.com/pedrosancheznery/Tampermonkey-Scripts
 Choose a license (e.g., MIT) and add a LICENSE file to the repository.
 
 ## Contact
-Pedro Sanchez — pefsanch (use GitHub issues or PRs for feedback).
+Pedro Sanchez Nery — (pefsanch) (use GitHub issues or PRs for feedback).
 
-Would you like me to create a downloadable README.md file now?
