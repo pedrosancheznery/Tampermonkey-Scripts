@@ -6,8 +6,9 @@ A collection of useful Tampermonkey userscripts by Pedro Sanchez (pefsanch), inc
 https://github.com/pedrosancheznery/Tampermonkey-Scripts
 
 ## Contents
-- **Extract Scannable IDs in FCResearch** — copies container Scannable IDs (optionally only those with quantity > 0) to clipboard via a floating button.  
-- Other utility userscripts (add more as you create them).
+- **Extract Scannable IDs in FCResearch** — copies container Scannable IDs (optionally only those with quantity > 0) to clipboard via a floating button.
+- **Submit Scannable IDs in FROST** - Reads scannable IDs from user input and submits them to a form  
+- **PNP Automation Tool** - Automate palletization by processing a list of IDs via the PNP tool logic 
 
 ## Features
 - Adds a floating **Copy Scannable IDs** button to the FCResearch page.  
