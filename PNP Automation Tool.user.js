@@ -1,12 +1,13 @@
 // ==UserScript==
 // @name         PNP Automation Tool
 // @namespace    HOU3
-// @version      1.4.8.16
+// @version      1.4.8.18
 // @description  Automate palletization by processing a list of IDs via the PNP tool logic; logs unprocessed totes and continues on error modals
 // @author       Pedro Sanchez (pefsanch)
 // @match        https://pnp-iad.aka.amazon.com/pnp
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=amazon.com
 // @homepage     https://github.com/pedrosancheznery/Tampermonkey-Scripts
+// @downloadURL  https://raw.githubusercontent.com/pedrosancheznery/Tampermonkey-Scripts/main/PNP%20Automation%20Tool.user.js
 // @updateURL    https://raw.githubusercontent.com/pedrosancheznery/Tampermonkey-Scripts/main/PNP%20Automation%20Tool.user.js
 // @grant        none
 // ==/UserScript==
@@ -56,8 +57,7 @@
         unprocessedHeading.style = "margin-top:10px;font-weight:bold;";
         const unprocessedTableDiv = document.createElement('div');
         unprocessedTableDiv.id = "unprocessed-table-div";
-        unprocessedTableDiv.innerText = "Unprocessed Totes";
-        unprocessedTableDiv.style = "max-height: 150px; overflow-y: auto";
+        unprocessedTableDiv.style = "max-height: 250px; overflow-y: auto";
         const unprocessedTable = document.createElement('table');
         unprocessedTable.id = "unprocessed-totes-table";
         unprocessedTable.style = "width:100%;border-collapse:collapse;margin-top:6px;font-size:12px;border:1px solid #ddd;";
