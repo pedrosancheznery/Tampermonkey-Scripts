@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         PNP Automation Tool
 // @namespace    HOU3
-// @version      1.4.8.18
+// @version      1.4.8.22
 // @description  Automate palletization by processing a list of IDs via the PNP tool logic; logs unprocessed totes and continues on error modals
 // @author       Pedro Sanchez (pefsanch)
 // @match        https://pnp-iad.aka.amazon.com/pnp
@@ -292,79 +292,83 @@
     }
 
     // Helper: extract info and dismiss modal
-    function handleErrorModal(modalEl) {
-        try {
-            const text = (modalEl && modalEl.textContent) ? modalEl.textContent : document.body.textContent;
-            // Try multiple regexes for container/tote id (e.g., tsBAXT529795 or TOTE123)
-            const toteMatch = text.match(/\b(ts[A-Za-z0-9]+)\b/i) || text.match(/\btote\s+([A-Za-z0-9-]+)\b/i) || text.match(/\b([A-Za-z0-9]{3,})\b/);
-            const toteId = (toteMatch && toteMatch[1]) ? toteMatch[1] : 'Unknown';
+function handleErrorModal(modalEl) {
+    try {
+        const text = modalEl?.textContent || document.body.textContent || "";
+        
+        // 1. Improved Tote ID Extraction
+        // Priorities: 1. ts-style IDs, 2. "tote [id]", 3. Fallback
+        const toteMatch = text.match(/\b(ts[A-Za-z0-9]+)\b/i) || 
+                          text.match(/\btote\s+([A-Za-z0-9-]+)\b/i);
+        const toteId = toteMatch ? toteMatch[1] : 'Unknown';
 
-            // Reason extraction: h4 or errorMessageHeader/NextStep
-            const emptyregex = /Error\s+is\b[^:]*:\s*(Container is empty)/;
-            const palletizedregex = /status\s+is\s*(PALLETIZED)/;
-            let reason = '';
-            let realReason = '';
-            const h4 = modalEl.querySelector('h4');
-            if (h4) reason = h4.textContent.trim();
-            //reason.match(emptyregex);
-            let match = reason.match(emptyregex);
-            if ( match && match[1] != '' ) {
-                console.log('Matched:' , match[1]);
-                realReason = match[1];
-                reason = realReason;
-            } else {
-                //reason.match(palletizedregex);
-                match = reason.match(palletizedregex);
-                if ( match && match[1] != '' ) {
-                    console.log('Matched:' , match[1]);
-                    realReason = match[1];
-                    reason = realReason;
+        // 2. Reason Extraction (Cleaned up Regex Logic)
+        const reasonPatterns = [
+            /Error\s+is\b[^:]*:\s*(Container is empty)/i,
+            /status\s+is\s*(PALLETIZED)/i,
+            /\b(PNH)\b(?=\s+container)/ // Your new PNH regex
+        ];
+
+        let reason = "";
+
+        // Check specific elements for the reason first
+        const sourceElements = ['h4', '.errorMessageHeader', '.errorMessageNextStep'];
+        for (const selector of sourceElements) {
+            const el = modalEl.querySelector(selector);
+            if (el && el.textContent.trim()) {
+                const content = el.textContent.trim();
+                // Check if the content matches one of our specific error patterns
+                const foundPattern = reasonPatterns.find(reg => reg.test(content));
+                if (foundPattern) {
+                    const match = content.match(foundPattern);
+                    reason = match[1] || match[0];
+                    break;
                 }
+                // If no specific pattern match, keep the raw text as a secondary fallback
+                if (!reason) reason = content;
             }
-            const headerDiv = modalEl.querySelector('.errorMessageHeader');
-            if (!reason && headerDiv) reason = headerDiv.textContent.trim();
-            const nextStep = modalEl.querySelector('.errorMessageNextStep');
-            if (!reason && nextStep) reason = nextStep.textContent.trim();
-            if (!reason) {
-                // fallback to some snippet of modal text
-                reason = text.split('\n').map(s => s.trim()).filter(Boolean).slice(0,2).join(' — ');
-            }
-
-            // Log to unprocessed table
-            logUnprocessedTote(toteId, reason);
-
-            // Try to dismiss the modal:
-            // 1) Dispatch 'c' key (Continue)
-            try {
-                const ev = new KeyboardEvent('keydown', { key: 'c', code: 'KeyC', keyCode: 67, which: 67, bubbles: true });
-                document.dispatchEvent(ev);
-            } catch (e) { /* ignore */ }
-
-            // 2) Click obvious buttons inside modal
-            const btnSelectors = ['button', '.btn', '.continue', '.close', '.modal-close', '.ok', '.confirm'];
-            for (const sel of btnSelectors) {
-                const btn = modalEl.querySelector(sel);
-                if (btn) {
-                    try { btn.click(); break; } catch(e) {}
-                }
-            }
-
-            // 3) Remove overlay/modal from DOM as last resort after short delay
-            setTimeout(() => {
-                const still = findErrorModal();
-                if (still) {
-                    const overlay = document.querySelector('.overlay');
-                    try { if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay); } catch(e){}
-                    try { if (still.parentNode) still.parentNode.removeChild(still); } catch(e){}
-                }
-            }, 300);
-
-            return { toteId, reason };
-        } catch (err) {
-            console.error('Error handling modal:', err);
-            return { toteId: 'Unknown', reason: 'Error handling modal' };
         }
+
+        // Final fallback: first two lines of text
+        if (!reason) {
+            reason = text.split('\n').map(s => s.trim()).filter(Boolean).slice(0, 2).join(' — ');
+        }
+
+        // Log result
+        logUnprocessedTote(toteId, reason);
+
+        // 3. Modal Dismissal Logic
+        dismissModal(modalEl);
+
+        return { toteId, reason };
+    } catch (err) {
+        console.error('Error handling modal:', err);
+        return { toteId: 'Unknown', reason: 'Error handling modal' };
     }
+}
+
+// Sub-function to keep logic separated
+function dismissModal(modalEl) {
+    if (!modalEl) return;
+
+    // 1. Keyboard Shortcut
+    try {
+        const ev = new KeyboardEvent('keydown', { key: 'c', code: 'KeyC', keyCode: 67, bubbles: true });
+        document.dispatchEvent(ev);
+    } catch (e) {}
+
+    // 2. Button Click
+    const btnSelectors = ['button', '.btn', '.continue', '.close', '.modal-close', '.ok', '.confirm'];
+    const btn = modalEl.querySelector(btnSelectors.join(','));
+    if (btn) btn.click();
+
+    // 3. Nuclear Removal
+    setTimeout(() => {
+        const overlay = document.querySelector('.overlay');
+        overlay?.remove();
+        modalEl?.remove();
+    }, 300);
+}
 
     // --- Start script when page loads ---
     window.addEventListener('load', () => {
