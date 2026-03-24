@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Submit Scannable IDs in FROST
 // @namespace    HOU3
-// @version      1.1.5
+// @version      1.1.6
 // @author       Pedro Sanchez (pefsanch)
 // @description  Read scannable IDs from user input and submit them to a form
 // @match        https://frost-prod-jlb-iad.iad.proxy.amazon.com/packnhold/create
@@ -265,9 +265,18 @@
                     console.log('Message changed!'); // For debugging
                     if (errorMessage.innerText != '') {
 						failCount++;
-                        addErrorLogRow(ErrorToteLogTableBody, toteId, "Stow", "-", 0);
-                        console.log(`Error Message: ${errorMessage.innerText}`);
-                        resolve(false);
+					    // Check for the specific "Empty list" error message
+					    let disposition = "Stow"; 
+					    if (errorMessage.innerText.includes("Null / Empty list of Items")) {
+					        disposition = "Empty";
+					    }
+					
+					    addErrorLogRow(ErrorToteLogTableBody, toteId, disposition, "-", 0);
+					    
+					    console.log(`Error Message: ${errorMessage.innerText} | Disposition: ${disposition}`);
+					    resolve(
+					
+					false);
                     } else {
                         console.log(`Success Message: ${successMessage.innerText}`);
                         handleSuccessMessage(successMessage.innerText);
