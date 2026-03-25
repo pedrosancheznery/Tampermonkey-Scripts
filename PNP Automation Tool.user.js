@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         PNP Automation Tool
 // @namespace    HOU3
-// @version      1.4.8.32
+// @version      1.1.1.12
 // @description  Automate palletization by processing a list of IDs via the PNP tool logic; logs unprocessed totes and continues on error modals
 // @author       Pedro Sanchez (pefsanch)
 // @match        https://pnp-iad.aka.amazon.com/pnp
@@ -33,6 +33,14 @@
         const paxInput = document.createElement('input');
         paxInput.id = "pax-input";
         paxInput.style = "width: 100%; margin-bottom: 8px; padding: 6px; box-sizing: border-box;";
+
+        // PAX label/input
+        const label3 = document.createElement('label');
+        label3.innerText = "Alternative PAX Label:";
+        label3.style = "display: block; font-weight: bold; margin-bottom: 5px;";
+        const altpaxInput = document.createElement('input');
+        altpaxInput.id = "alt-pax-input";
+        altpaxInput.style = "width: 100%; margin-bottom: 8px; padding: 6px; box-sizing: border-box;";
 
         // IDs textarea
         const label1 = document.createElement('label');
