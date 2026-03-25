@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Submit Scannable IDs in FROST
 // @namespace    HOU3
-// @version      1.1.6
+// @version      1.1.7
 // @author       Pedro Sanchez (pefsanch)
 // @description  Read scannable IDs from user input and submit them to a form
 // @match        https://frost-prod-jlb-iad.iad.proxy.amazon.com/packnhold/create
@@ -20,7 +20,7 @@
     GM_addStyle(`
         #tote-log-container {
             position: fixed;
-            bottom: 10px;
+            top: 250px;
             right: 10px;
             width: 400px;
             background-color: #f9f9f9;
@@ -30,6 +30,8 @@
             font-family: sans-serif;
             font-size: 9px;
             padding: 10px;
+			overflow-y: auto;
+			max-height: 440px;
             z-index: 10000;
         }
         #tote-log-container h4 {
@@ -213,6 +215,7 @@
     // Function to submit scannable IDs
     async function submitScannableIDs(scannableIDs) {
         const status = document.getElementById('check-status');
+		const inputText = document.getElementById('scannableIdsInput');
         let i = 0;
         console.log('Retrieved scannable IDs:', scannableIDs);
 
@@ -221,7 +224,7 @@
             return;
         }
 
-        //ErrorToteLogTableBody = createErrorLogTable();
+        inputText.disabled = true;
 
         for (const id of scannableIDs) {
             //const toteId = id;
@@ -243,6 +246,7 @@
         }
         status.innerText = "DONE! Batch complete.";
         status.style.color = "green";
+		inputText.disabled = false;
     }
 
     // Function to wait for the #message div to change
