@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         PNP Automation Tool
 // @namespace    HOU3
-// @version      1.4.8.25
+// @version      1.4.8.30
 // @description  Automate palletization by processing a list of IDs via the PNP tool logic; logs unprocessed totes and continues on error modals
 // @author       Pedro Sanchez (pefsanch)
 // @match        https://pnp-iad.aka.amazon.com/pnp
@@ -150,6 +150,7 @@
                 status.innerText = `Skipped (${i}/${lines.length}): ${result.toteId}`;
                 status.style.color = "orange";
                 failCount++;
+                updateStats();
                 // continue to next ID
                 await new Promise(r => setTimeout(r, 600)); // small pause
                 continue;
@@ -211,6 +212,8 @@
                     if (messageContainer) {
                         const header = messageContainer.querySelector('h1');
                         if (header && header.innerText.includes("Tote submitted to pack")) {
+                            successCount++;
+                            updateStats();
                             if (!resolved) {
                                 resolved = true;
                                 observer.disconnect();
