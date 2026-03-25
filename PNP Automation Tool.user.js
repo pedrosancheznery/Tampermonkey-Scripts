@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         PNP Automation Tool
 // @namespace    HOU3
-// @version      1.4.8.22
+// @version      1.4.8.25
 // @description  Automate palletization by processing a list of IDs via the PNP tool logic; logs unprocessed totes and continues on error modals
 // @author       Pedro Sanchez (pefsanch)
 // @match        https://pnp-iad.aka.amazon.com/pnp
@@ -14,6 +14,10 @@
 
 (function() {
     'use strict';
+
+    let statsEl;
+    let successCount = 0;
+    let failCount = 0;
 
     // --- UI creation ---
     function createUI() {
@@ -42,8 +46,12 @@
         // Process button
         const btn = document.createElement('button');
         btn.id = 'tm-process-button';
-        btn.innerText = "Process Batch";
+        btn.innerText = "▶ Process";
         btn.style = "width: 100%; padding: 10px; background-color: #28a745; color: white; border: none; cursor: pointer; font-weight: bold; border-radius: 4px;";
+
+        statsEl = document.createElement("div");
+        statsEl.style = "font-size:12px;color:#888;margin-bottom:14px;";
+        statsEl.innerText = "✅ 0 | ❌ 0";
 
         // Status
         const statusDiv = document.createElement('div');
@@ -52,9 +60,13 @@
         statusDiv.style = "margin-top: 8px; font-size: 12px; color: #555; font-weight: bold;";
 
         // Unprocessed Totes heading + table
+        const unprocessedDiv = document.createElement('div');
+        unprocessedDiv.id = "unprocessed-div";
+        unprocessedDiv.style = "margin-top:10px;font-weight:bold;display:none;";
         const unprocessedHeading = document.createElement('div');
+        unprocessedHeading.id = "unprocessed-heading";
         unprocessedHeading.innerText = "Unprocessed Totes";
-        unprocessedHeading.style = "margin-top:10px;font-weight:bold;";
+        //unprocessedHeading.style = "margin-top:10px;font-weight:bold;";
         const unprocessedTableDiv = document.createElement('div');
         unprocessedTableDiv.id = "unprocessed-table-div";
         unprocessedTableDiv.style = "max-height: 250px; overflow-y: auto";
@@ -68,11 +80,13 @@
         container.appendChild(paxInput);
         container.appendChild(label1);
         container.appendChild(textarea);
+        container.appendChild(statsEl);
         container.appendChild(btn);
         container.appendChild(statusDiv);
-        container.appendChild(unprocessedHeading);
         unprocessedTableDiv.appendChild(unprocessedTable);
-        container.appendChild(unprocessedTableDiv);
+        unprocessedHeading.appendChild(unprocessedTableDiv);
+        unprocessedDiv.appendChild(unprocessedHeading);
+        container.appendChild(unprocessedDiv);
         document.body.appendChild(container);
 
         // Wire button click
@@ -87,6 +101,9 @@
     // --- Utility: log unprocessed tote ---
     function logUnprocessedTote(toteId, reason) {
         const table = document.getElementById('unprocessed-totes-table');
+        const unprocessedDiv = document.getElementById('unprocessed-div'); //unprocessed-div
+        unprocessedDiv.style.display = 'block';
+
         if (!table) return;
         const tbody = table.querySelector('tbody');
         const tr = document.createElement('tr');
@@ -108,6 +125,8 @@
 
         let i = 0;
         tbody.innerHTML = '';
+        textarea.disabled = true;
+        paxInput.disabled = true;
 
         if (lines.length === 0) return alert("Please enter at least one ID.");
 
@@ -130,6 +149,7 @@
             if (result && result.type === 'error') {
                 status.innerText = `Skipped (${i}/${lines.length}): ${result.toteId}`;
                 status.style.color = "orange";
+                failCount++;
                 // continue to next ID
                 await new Promise(r => setTimeout(r, 600)); // small pause
                 continue;
@@ -159,6 +179,8 @@
             await new Promise(r => setTimeout(r, 500));
         }
 
+        textarea.disabled = false;
+        paxInput.disabled = false;
         textarea.value = "";
         status.innerText = `Finished! Processed ${lines.length} items`;
         status.style.color = "green";
@@ -213,6 +235,14 @@
         });
     }
 
+    // Update Stats
+    function updateStats() {
+        if (statsEl) {
+            statsEl.textContent = "✅ " + successCount + " | ❌ " + failCount;
+        }
+    }
+
+
     // --- wait for palletize complete message ---
     function waitForPalletizeCompleteMessage(timeoutMs = 10000) {
         return new Promise((resolve) => {
@@ -223,6 +253,7 @@
                     const header = messageContainer.querySelector('h1');
                     if (header && header.innerText.includes("Palletize complete")) {
                         if (!resolved) {
+                            successCount++;
                             resolved = true;
                             observer.disconnect();
                             resolve({ type: 'success' });
@@ -295,7 +326,6 @@
 function handleErrorModal(modalEl) {
     try {
         const text = modalEl?.textContent || document.body.textContent || "";
-        
         // 1. Improved Tote ID Extraction
         // Priorities: 1. ts-style IDs, 2. "tote [id]", 3. Fallback
         const toteMatch = text.match(/\b(ts[A-Za-z0-9]+)\b/i) || 
