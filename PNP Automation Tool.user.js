@@ -178,7 +178,58 @@
                 ]);
 
                 if (postResult && postResult.type === 'error') {
-                    status.innerText = `PAX failed (${i}/${lines.length}): ${postResult.toteId}`;
+                    const reasonText = (postResult.reason || '').toString().toLowerCase();
+
+                    // Detect vendor-mix / MIX_OF_VENDOR_CODE / vendor code mismatch cases
+                    const isVendorMix = reasonText.includes('mix_of_vendor_code') ||
+                                        reasonText.includes('mix of vendor') ||
+                                        reasonText.includes('vendor code mismatch') ||
+                                        reasonText.includes('mix of different vendor');
+
+                    if (isVendorMix) {
+                        status.innerText = `Vendor-mix detected (${i}/${lines.length}): scanning alt pax`;
+                        status.style.color = "orange";
+
+                        // Get alternate pax value and try scanning it
+                        const altPaxEl = document.getElementById('alt-pax-input');
+                        const altPax = altPaxEl ? altPaxEl.value.trim() : '';
+                        if (altPax) {
+                            window.scan && window.scan(altPax);
+                            // wait for palletize/success or another error
+                            const altResult = await Promise.race([
+                                waitForPalletizeCompleteMessage(),
+                                waitForSuccessMessage(),
+                                waitForErrorModal()
+                            ]);
+
+                            if (altResult && altResult.type === 'error') {
+                                // still an error after alt pax
+                                status.innerText = `Alt PAX failed (${i}/${lines.length}): ${altResult.toteId || ''}`;
+                                status.style.color = "orange";
+                                failCount++;
+                                updateStats();
+                                await new Promise(r => setTimeout(r, 600));
+                                continue;
+                            }
+
+                            // success on alt pax
+                            successCount++;
+                            updateStats();
+                            await new Promise(r => setTimeout(r, 600));
+                            continue;
+                        } else {
+                            // no alt pax provided — treat as failure/skip
+                            status.innerText = `No alt PAX to try (${i}/${lines.length}): ${postResult.toteId || ''}`;
+                            status.style.color = "orange";
+                            failCount++;
+                            updateStats();
+                            await new Promise(r => setTimeout(r, 600));
+                            continue;
+                        }
+                    }
+
+                    // Non-vendor-mix errors fall through to default skip behavior
+                    status.innerText = `PAX failed (${i}/${lines.length}): ${postResult.toteId || ''}`;
                     status.style.color = "orange";
                     await new Promise(r => setTimeout(r, 600));
                     continue;
