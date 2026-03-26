@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         PNP Automation Tool
 // @namespace    HOU3
-// @version      1.1.1.14
+// @version      1.1.1.15
 // @description  Automate palletization by processing a list of IDs via the PNP tool logic; logs unprocessed totes and continues on error modals
 // @author       Pedro Sanchez (pefsanch)
 // @match        https://pnp-iad.aka.amazon.com/pnp
@@ -87,6 +87,8 @@
         // Append elements
         container.appendChild(label2);
         container.appendChild(paxInput);
+        container.appendChild(label3);
+        container.appendChild(altpaxInput);
         container.appendChild(label1);
         container.appendChild(textarea);
         container.appendChild(statsEl);
@@ -213,8 +215,6 @@
                             }
 
                             // success on alt pax
-                            successCount++;
-                            updateStats();
                             await new Promise(r => setTimeout(r, 600));
                             continue;
                         } else {
@@ -227,6 +227,8 @@
                             continue;
                         }
                     }
+                    successCount++;
+                    updateStats();
 
                     // Non-vendor-mix errors fall through to default skip behavior
                     status.innerText = `PAX failed (${i}/${lines.length}): ${postResult.toteId || ''}`;
