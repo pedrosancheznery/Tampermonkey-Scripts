@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Submit Scannable IDs in FROST
 // @namespace    HOU3
-// @version      1.1.12
+// @version      1.1.14
 // @author       Pedro Sanchez (pefsanch)
 // @description  Read scannable IDs from user input and submit them to a form
 // @match        https://frost-prod-jlb-iad.iad.proxy.amazon.com/packnhold/create
@@ -106,12 +106,12 @@
     let failCount = 0;
     
     // paste into a specific textarea element
-    async function pasteIntoTextarea(textarea) {  
-        try {    
-            const text = await navigator.clipboard.readText(); // requires HTTPS and user gesture    
-            textarea.value = text;  
-        } catch (err) {    
-            console.error('Clipboard read failed:', err);  
+    async function pasteIntoTextarea(textarea) {
+        try {
+            const text = await navigator.clipboard.readText(); // requires HTTPS and user gesture
+            textarea.value = text;
+        } catch (err) {
+            console.error('Clipboard read failed:', err);
         }
     }
     
@@ -192,8 +192,8 @@
 			successCount = 0 ;
 			failCount = 0;
 			updateStats();
-			let logTable = document.getElementById('tote-log-container');
-			logtable.display = none;
+			const logContainer = document.getElementById('tote-log-container');
+			logContainer.style.display = 'none';
         }; // Clear contents
         modal.appendChild(clearButton);
 
@@ -219,7 +219,7 @@
     async function submitScannableIDs(scannableIDs) {
         const status = document.getElementById('check-status');
 		const inputText = document.getElementById('scannableIdsInput');
-		const logTable = document.getElementById('tote-log-container');
+		const logContainer = document.getElementById('tote-log-container');
         let i = 0;
         console.log('Retrieved scannable IDs:', scannableIDs);
 
@@ -229,7 +229,9 @@
         }
 
         inputText.disabled = true;
-		logTable.display = 'block';
+        if (logContainer) {
+            logContainer.style.display = 'block';
+        }
 
         for (const id of scannableIDs) {
             //const toteId = id;
