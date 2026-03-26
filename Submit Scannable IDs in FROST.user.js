@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Submit Scannable IDs in FROST
 // @namespace    HOU3
-// @version      1.1.7
+// @version      1.1.9
 // @author       Pedro Sanchez (pefsanch)
 // @description  Read scannable IDs from user input and submit them to a form
 // @match        https://frost-prod-jlb-iad.iad.proxy.amazon.com/packnhold/create
@@ -21,22 +21,23 @@
         #tote-log-container {
             position: fixed;
             top: 250px;
-            right: 10px;
+            left: 270px;
             width: 400px;
             background-color: #f9f9f9;
-            border: 1px solid #ccc;
+            border: 2px solid rgb(51, 51, 51);
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
             font-family: sans-serif;
             font-size: 9px;
             padding: 10px;
 			overflow-y: auto;
-			max-height: 440px;
+			max-height: 360px;
             z-index: 10000;
         }
         #tote-log-container h4 {
             margin: 0 0 10px;
-            font-size: 10px;
+            font-size: 12px;
+			font-weight: bold;
             text-align: center;
         }
         #tote-error-log-table {
@@ -119,9 +120,9 @@
         const modal = document.createElement('div');
         modal.id = 'inputModal';
         modal.style.position = 'fixed';
-        modal.style.bottom = '10px';
-        modal.style.left = '140px';
-        modal.style.transform = 'translate(-50%, -50%)';
+        modal.style.top = '250px';
+        modal.style.left = '10px';
+        //modal.style.transform = 'translate(-50%, -50%)';
         modal.style.padding = '15px';
         modal.style.backgroundColor = '#f9f9f9';
         modal.style.border = "2px solid #333";
