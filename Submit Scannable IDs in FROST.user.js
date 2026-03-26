@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Submit Scannable IDs in FROST
 // @namespace    HOU3
-// @version      1.1.9
+// @version      1.1.10
 // @author       Pedro Sanchez (pefsanch)
 // @description  Read scannable IDs from user input and submit them to a form
 // @match        https://frost-prod-jlb-iad.iad.proxy.amazon.com/packnhold/create
@@ -187,11 +187,13 @@
         clearButton.style = "width: 30%; padding: 10px; cursor: pointer; background: #cc0000; color: white; border: none; border-radius: 4px; font-weight: bold; margin-left: 10px";
         clearButton.innerText = "Clear";
         clearButton.onclick = () => {
-            document.getElementById("scannableIdsInput").value = ""
-            document.getElementById("tote-error-log-table-body").innerHTML = ""
-			successCount = 0 
-			failCount = 0
-			updateStats()
+            document.getElementById("scannableIdsInput").value = "";
+            document.getElementById("tote-error-log-table-body").innerHTML = "";
+			successCount = 0 ;
+			failCount = 0;
+			updateStats();
+			let logTable = document.getElementById('tote-log-container');
+			logtable.display = none;
         }; // Clear contents
         modal.appendChild(clearButton);
 
@@ -217,6 +219,7 @@
     async function submitScannableIDs(scannableIDs) {
         const status = document.getElementById('check-status');
 		const inputText = document.getElementById('scannableIdsInput');
+		let logTable = document.getElementById('tote-log-container');
         let i = 0;
         console.log('Retrieved scannable IDs:', scannableIDs);
 
@@ -226,6 +229,7 @@
         }
 
         inputText.disabled = true;
+		logtable.display = block;
 
         for (const id of scannableIDs) {
             //const toteId = id;
