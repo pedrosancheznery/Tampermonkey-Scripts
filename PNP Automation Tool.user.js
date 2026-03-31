@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         PNP Automation Tool
 // @namespace    HOU3
-// @version      1.1.1.19
+// @version      1.1.1.20
 // @description  Automate palletization by processing a list of IDs via the PNP tool logic; logs unprocessed totes and continues on error modals
 // @author       Pedro Sanchez (pefsanch)
 // @match        https://pnp-iad.aka.amazon.com/pnp
@@ -52,30 +52,30 @@
         textarea.style = "width: 100%; height: 120px; margin-bottom: 10px; font-family: monospace; box-sizing: border-box; padding:6px;";
         textarea.placeholder = "TOTE123\nPKG456...";
 
-        // Delay controls    
-        const delayWrapper = document.createElement('div');    
+        // Delay controls
+        const delayWrapper = document.createElement('div');
         delayWrapper.style = "display:flex;gap:8px;align-items:center;margin-bottom:8px;";
-        const delayCheckbox = document.createElement('input');  
-      
-        delayCheckbox.type = 'checkbox';    
-        delayCheckbox.id = 'delay-enable-checkbox';    
+        const delayCheckbox = document.createElement('input');
+
+        delayCheckbox.type = 'checkbox';
+        delayCheckbox.id = 'delay-enable-checkbox';
         delayCheckbox.title = 'Enable delay between items';
-        const delayLabel = document.createElement('label');   
-      
-        delayLabel.htmlFor = 'delay-enable-checkbox';    
-        delayLabel.innerText = 'Delay (s):';    
+        const delayLabel = document.createElement('label');
+
+        delayLabel.htmlFor = 'delay-enable-checkbox';
+        delayLabel.innerText = 'Delay (s):';
         delayLabel.style = "font-weight: bold;";
-      
-        const delaySecondsInput = document.createElement('input');    
-        delaySecondsInput.type = 'number';    
-        delaySecondsInput.id = 'delay-seconds-input';    
-        delaySecondsInput.min = '0';    
-        delaySecondsInput.value = '1';    
+
+        const delaySecondsInput = document.createElement('input');
+        delaySecondsInput.type = 'number';
+        delaySecondsInput.id = 'delay-seconds-input';
+        delaySecondsInput.min = '0';
+        delaySecondsInput.value = '1';
         delaySecondsInput.style = "width: 60px; padding:4px; box-sizing:border-box;";
-        delayWrapper.appendChild(delayCheckbox);    
-        delayWrapper.appendChild(delayLabel);    
+        delayWrapper.appendChild(delayCheckbox);
+        delayWrapper.appendChild(delayLabel);
         delayWrapper.appendChild(delaySecondsInput);
-      
+
         // Process button
         const btn = document.createElement('button');
         btn.id = 'tm-process-button';
@@ -160,9 +160,12 @@
         const tbody = table.querySelector('tbody');
         const delayEnabledEl = document.getElementById('delay-enable-checkbox');
         const delayEnabled = !!(delayEnabledEl && delayEnabledEl.checked);
-        if (delayEnabled) 
-            const delaySeconds = document.getElementById('delay-seconds-input').value().trim;
-        
+        if (delayEnabled) {
+          const raw = document.getElementById('delay-seconds-input')?.value;
+          const parsed = Number(raw);
+          const delaySeconds = Number.isFinite(parsed) && parsed > 0 ? Math.max(0, Math.floor(parsed)) : 0;
+        }
+
         let i = 0;
         tbody.innerHTML = '';
         textarea.disabled = true;
@@ -271,10 +274,10 @@
 
             // Optional delay between items
             await new Promise(r => setTimeout(r, 500));
-          
-            // Apply configured delay between items if enabled        
-            if (delayEnabled && delaySeconds > 0) {            
-              await new Promise(r => setTimeout(r, delaySeconds * 1000));        
+
+            // Apply configured delay between items if enabled
+            if (delayEnabled && delaySeconds > 0) {
+              //await new Promise(r => setTimeout(r, delaySeconds * 1000));
             }
         }
 
@@ -429,7 +432,7 @@
             const text = modalEl?.textContent || document.body.textContent || "";
             // 1. Improved Tote ID Extraction
             // Priorities: 1. ts-style IDs, 2. "tote [id]", 3. Fallback
-            const toteMatch = text.match(/\b(ts[A-Za-z0-9]+)\b/i) || 
+            const toteMatch = text.match(/\b(ts[A-Za-z0-9]+)\b/i) ||
                               text.match(/\btote\s+([A-Za-z0-9-]+)\b/i);
             const toteId = toteMatch ? toteMatch[1] : 'Unknown';
 
