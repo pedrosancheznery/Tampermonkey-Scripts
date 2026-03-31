@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         PNP Automation Tool
 // @namespace    HOU3
-// @version      1.1.1.20
+// @version      1.1.1.21
 // @description  Automate palletization by processing a list of IDs via the PNP tool logic; logs unprocessed totes and continues on error modals
 // @author       Pedro Sanchez (pefsanch)
 // @match        https://pnp-iad.aka.amazon.com/pnp
@@ -160,11 +160,9 @@
         const tbody = table.querySelector('tbody');
         const delayEnabledEl = document.getElementById('delay-enable-checkbox');
         const delayEnabled = !!(delayEnabledEl && delayEnabledEl.checked);
-        if (delayEnabled) {
-          const raw = document.getElementById('delay-seconds-input')?.value;
-          const parsed = Number(raw);
-          const delaySeconds = Number.isFinite(parsed) && parsed > 0 ? Math.max(0, Math.floor(parsed)) : 0;
-        }
+        const raw = document.getElementById('delay-seconds-input')?.value;
+        const parsed = Number(raw);
+        const delaySeconds = Number.isFinite(parsed) && parsed > 0 ? Math.max(0, Math.floor(parsed)) : 0;
 
         let i = 0;
         tbody.innerHTML = '';
@@ -277,7 +275,8 @@
 
             // Apply configured delay between items if enabled
             if (delayEnabled && delaySeconds > 0) {
-              //await new Promise(r => setTimeout(r, delaySeconds * 1000));
+                console.log(`Delaying ${delaySeconds} seconds`);
+              await new Promise(r => setTimeout(r, delaySeconds * 1000));
             }
         }
 
