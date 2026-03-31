@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         PNP Automation Tool
 // @namespace    HOU3
-// @version      1.1.1.16
+// @version      1.1.1.18
 // @description  Automate palletization by processing a list of IDs via the PNP tool logic; logs unprocessed totes and continues on error modals
 // @author       Pedro Sanchez (pefsanch)
 // @match        https://pnp-iad.aka.amazon.com/pnp
@@ -52,6 +52,30 @@
         textarea.style = "width: 100%; height: 120px; margin-bottom: 10px; font-family: monospace; box-sizing: border-box; padding:6px;";
         textarea.placeholder = "TOTE123\nPKG456...";
 
+        // Delay controls    
+        const delayWrapper = document.createElement('div');    
+        delayWrapper.style = "display:flex;gap:8px;align-items:center;margin-bottom:8px;";
+        const delayCheckbox = document.createElement('input');  
+      
+        delayCheckbox.type = 'checkbox';    
+        delayCheckbox.id = 'delay-enable-checkbox';    
+        delayCheckbox.title = 'Enable delay between items';
+        const delayLabel = document.createElement('label');   
+      
+        delayLabel.htmlFor = 'delay-enable-checkbox';    
+        delayLabel.innerText = 'Delay (s):';    
+        delayLabel.style = "font-weight: bold;";
+      
+        const delaySecondsInput = document.createElement('input');    
+        delaySecondsInput.type = 'number';    
+        delaySecondsInput.id = 'delay-seconds-input';    
+        delaySecondsInput.min = '0';    
+        delaySecondsInput.value = '1';    
+        delaySecondsInput.style = "width: 60px; padding:4px; box-sizing:border-box;";
+        delayWrapper.appendChild(delayCheckbox);    
+        delayWrapper.appendChild(delayLabel);    
+        delayWrapper.appendChild(delaySecondsInput);
+      
         // Process button
         const btn = document.createElement('button');
         btn.id = 'tm-process-button';
@@ -89,6 +113,7 @@
         container.appendChild(paxInput);
         container.appendChild(label3);
         container.appendChild(altpaxInput);
+        container.appendChild(delayWrapper);
         container.appendChild(label1);
         container.appendChild(textarea);
         container.appendChild(statsEl);
@@ -133,6 +158,10 @@
         const table = document.getElementById('unprocessed-totes-table');
         if (!table) return;
         const tbody = table.querySelector('tbody');
+        const delayEnabledEl = document.getElementById('delay-enable-checkbox');
+        const delayEnabled = !!(delayEnabledEl && delayEnabledEl.checked);
+        if (delayEnabled) 
+            const delaySeconds = document.getElementById('delay-seconds').value().trim;
         
         let i = 0;
         tbody.innerHTML = '';
@@ -242,6 +271,11 @@
 
             // Optional delay between items
             await new Promise(r => setTimeout(r, 500));
+          
+            // Apply configured delay between items if enabled        
+            if (delayEnabled && delaySeconds > 0) {            
+              await new Promise(r => setTimeout(r, delaySeconds * 1000));        
+            }
         }
 
         textarea.disabled = false;
@@ -390,82 +424,82 @@
     }
 
     // Helper: extract info and dismiss modal
-function handleErrorModal(modalEl) {
-    try {
-        const text = modalEl?.textContent || document.body.textContent || "";
-        // 1. Improved Tote ID Extraction
-        // Priorities: 1. ts-style IDs, 2. "tote [id]", 3. Fallback
-        const toteMatch = text.match(/\b(ts[A-Za-z0-9]+)\b/i) || 
-                          text.match(/\btote\s+([A-Za-z0-9-]+)\b/i);
-        const toteId = toteMatch ? toteMatch[1] : 'Unknown';
+    function handleErrorModal(modalEl) {
+        try {
+            const text = modalEl?.textContent || document.body.textContent || "";
+            // 1. Improved Tote ID Extraction
+            // Priorities: 1. ts-style IDs, 2. "tote [id]", 3. Fallback
+            const toteMatch = text.match(/\b(ts[A-Za-z0-9]+)\b/i) || 
+                              text.match(/\btote\s+([A-Za-z0-9-]+)\b/i);
+            const toteId = toteMatch ? toteMatch[1] : 'Unknown';
 
-        // 2. Reason Extraction (Cleaned up Regex Logic)
-        const reasonPatterns = [
-            /Error\s+is\b[^:]*:\s*(Container is empty)/i,
-            /status\s+is\s*(PALLETIZED)/i,
-            /\b(PNH)\b(?=\s+container)/ // Your new PNH regex
-        ];
+            // 2. Reason Extraction (Cleaned up Regex Logic)
+            const reasonPatterns = [
+                /Error\s+is\b[^:]*:\s*(Container is empty)/i,
+                /status\s+is\s*(PALLETIZED)/i,
+                /\b(PNH)\b(?=\s+container)/ // Your new PNH regex
+            ];
 
-        let reason = "";
+            let reason = "";
 
-        // Check specific elements for the reason first
-        const sourceElements = ['h4', '.errorMessageHeader', '.errorMessageNextStep'];
-        for (const selector of sourceElements) {
-            const el = modalEl.querySelector(selector);
-            if (el && el.textContent.trim()) {
-                const content = el.textContent.trim();
-                // Check if the content matches one of our specific error patterns
-                const foundPattern = reasonPatterns.find(reg => reg.test(content));
-                if (foundPattern) {
-                    const match = content.match(foundPattern);
-                    reason = match[1] || match[0];
-                    break;
+            // Check specific elements for the reason first
+            const sourceElements = ['h4', '.errorMessageHeader', '.errorMessageNextStep'];
+            for (const selector of sourceElements) {
+                const el = modalEl.querySelector(selector);
+                if (el && el.textContent.trim()) {
+                    const content = el.textContent.trim();
+                    // Check if the content matches one of our specific error patterns
+                    const foundPattern = reasonPatterns.find(reg => reg.test(content));
+                    if (foundPattern) {
+                        const match = content.match(foundPattern);
+                        reason = match[1] || match[0];
+                        break;
+                    }
+                    // If no specific pattern match, keep the raw text as a secondary fallback
+                    if (!reason) reason = content;
                 }
-                // If no specific pattern match, keep the raw text as a secondary fallback
-                if (!reason) reason = content;
             }
+
+            // Final fallback: first two lines of text
+            if (!reason) {
+                reason = text.split('\n').map(s => s.trim()).filter(Boolean).slice(0, 2).join(' — ');
+            }
+
+            // Log result
+            logUnprocessedTote(toteId, reason);
+
+            // 3. Modal Dismissal Logic
+            dismissModal(modalEl);
+
+            return { toteId, reason };
+        } catch (err) {
+            console.error('Error handling modal:', err);
+            return { toteId: 'Unknown', reason: 'Error handling modal' };
         }
-
-        // Final fallback: first two lines of text
-        if (!reason) {
-            reason = text.split('\n').map(s => s.trim()).filter(Boolean).slice(0, 2).join(' — ');
-        }
-
-        // Log result
-        logUnprocessedTote(toteId, reason);
-
-        // 3. Modal Dismissal Logic
-        dismissModal(modalEl);
-
-        return { toteId, reason };
-    } catch (err) {
-        console.error('Error handling modal:', err);
-        return { toteId: 'Unknown', reason: 'Error handling modal' };
     }
-}
 
-// Sub-function to keep logic separated
-function dismissModal(modalEl) {
-    if (!modalEl) return;
+    // Sub-function to keep logic separated
+    function dismissModal(modalEl) {
+        if (!modalEl) return;
 
-    // 1. Keyboard Shortcut
-    try {
-        const ev = new KeyboardEvent('keydown', { key: 'c', code: 'KeyC', keyCode: 67, bubbles: true });
-        document.dispatchEvent(ev);
-    } catch (e) {}
+        // 1. Keyboard Shortcut
+        try {
+            const ev = new KeyboardEvent('keydown', { key: 'c', code: 'KeyC', keyCode: 67, bubbles: true });
+            document.dispatchEvent(ev);
+        } catch (e) {}
 
-    // 2. Button Click
-    const btnSelectors = ['button', '.btn', '.continue', '.close', '.modal-close', '.ok', '.confirm'];
-    const btn = modalEl.querySelector(btnSelectors.join(','));
-    if (btn) btn.click();
+        // 2. Button Click
+        const btnSelectors = ['button', '.btn', '.continue', '.close', '.modal-close', '.ok', '.confirm'];
+        const btn = modalEl.querySelector(btnSelectors.join(','));
+        if (btn) btn.click();
 
-    // 3. Nuclear Removal
-    setTimeout(() => {
-        const overlay = document.querySelector('.overlay');
-        overlay?.remove();
-        modalEl?.remove();
-    }, 300);
-}
+        // 3. Nuclear Removal
+        setTimeout(() => {
+            const overlay = document.querySelector('.overlay');
+            overlay?.remove();
+            modalEl?.remove();
+        }, 300);
+    }
 
     // --- Start script when page loads ---
     window.addEventListener('load', () => {
