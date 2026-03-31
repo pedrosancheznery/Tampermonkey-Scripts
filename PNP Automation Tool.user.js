@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         PNP Automation Tool
 // @namespace    HOU3
-// @version      1.1.1.18
+// @version      1.1.1.19
 // @description  Automate palletization by processing a list of IDs via the PNP tool logic; logs unprocessed totes and continues on error modals
 // @author       Pedro Sanchez (pefsanch)
 // @match        https://pnp-iad.aka.amazon.com/pnp
@@ -161,7 +161,7 @@
         const delayEnabledEl = document.getElementById('delay-enable-checkbox');
         const delayEnabled = !!(delayEnabledEl && delayEnabledEl.checked);
         if (delayEnabled) 
-            const delaySeconds = document.getElementById('delay-seconds').value().trim;
+            const delaySeconds = document.getElementById('delay-seconds-input').value().trim;
         
         let i = 0;
         tbody.innerHTML = '';
