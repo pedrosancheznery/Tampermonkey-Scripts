@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Extract Scannable IDs in FCResearch (Copy to Clipboard)
 // @namespace    HOU3
-// @version      1.0.1
+// @version      1.0.2
 // @author       Pedro Sanchez (pefsanch)
 // @description  Extract scannable IDs from container hierarchy and copy to clipboard via a button (only containers with qty > 0)
 // @match        https://qi-fcresearch-na.corp.amazon.com/HOU3/*
@@ -11,6 +11,7 @@
 // downloadURL   https://raw.githubusercontent.com/pedrosancheznery/Tampermonkey-Scripts/main/Extract%20Scannable%20IDs%20in%20FCResearch%20(Copy%20to%20Clipboard).user.js
 // @updateURL    https://raw.githubusercontent.com/pedrosancheznery/Tampermonkey-Scripts/main/Extract%20Scannable%20IDs%20in%20FCResearch%20(Copy%20to%20Clipboard).user.js
 // @grant        none
+// @run-at       document-end
 // ==/UserScript==
 
 (function() {
