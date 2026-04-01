@@ -1,0 +1,91 @@
+// ==UserScript==
+// @name         Tote Bulk Checker
+// @namespace    HOU3
+// @version      1.0.1
+// @description  Batch check totes with a robust Enter key simulation
+// @author       Pedro Sanchez (pefsanch)
+// @match        https://wd-repair-portal-na.aka.amazon.com/resources/ReCommerceFCWebToolsUI/html/listTote.html
+// @grant        none
+// @icon         https://www.google.com/s2/favicons?sz=64&domain=amazon.com
+// @downloadURL  https://raw.githubusercontent.com/pedrosancheznery/Tampermonkey-Scripts/main/Tote%20Bulk%20Checker.user.js
+// @updateURL    https://raw.githubusercontent.com/pedrosancheznery/Tampermonkey-Scripts/main/Tote%20Bulk%20Checker.user.js
+// @run-at       document-end
+// ==/UserScript==
+
+(function() {
+    'use strict';
+
+    // 1. Create the UI
+    const container = document.createElement('div');
+    container.style = `
+        position: fixed; bottom: 50px; left: 10px; z-index: 9999;
+        background: #f9f9f9; padding: 15px; border: 2px solid #333;
+        border-radius: 8px; box-shadow: 0px 4px 10px rgba(0,0,0,0.3);
+        width: 260px; font-family: sans-serif;
+    `;
+
+    container.innerHTML = `
+        <b style="display:block; margin-bottom:5px;">Bulk Tote Checker</b>
+        <textarea id="bulk-tote-input" rows="8" placeholder="Paste IDs here..."
+            style="width: 100%; margin-bottom: 10px; font-family: monospace;"></textarea>
+        <button id="run-check-btn" style="width: 100%; padding: 10px; cursor: pointer; background: #28a745; color: white; border: none; border-radius: 4px; font-weight: bold;">
+            CHECK NOW
+        </button>
+        <button id='clear-contents' style="width: 100%; padding: 10px; cursor: pointer; background: #cc0000; color: white; border: none; border-radius: 4px; font-weight: bold;">Clear Contents</button>
+        <div id="check-status" style="margin-top: 8px; font-size: 12px; color: #555; font-weight: bold;">Ready.</div>
+    `;
+
+    document.body.appendChild(container);
+
+    // 2. The Processing Logic
+    document.getElementById('run-check-btn').addEventListener('click', async () => {
+        const textArea = document.getElementById('bulk-tote-input');
+        const status = document.getElementById('check-status');
+        const mainInput = document.querySelector('#tote-id-input-textfield');
+
+        if (!mainInput) {
+            alert("Error: Input field '#tote-id-input-textfield' not found.");
+            return;
+        }
+
+        // Define 'lines' here so it is accessible in the loop
+        const lines = textArea.value.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+
+        if (lines.length === 0) {
+            status.innerText = "Error: No IDs entered.";
+            return;
+        }
+
+        for (let i = 0; i < lines.length; i++) {
+            const currentID = lines[i];
+            status.innerText = `Checking (${i + 1}/${lines.length}): ${currentID}`;
+            status.style.color = "blue";
+
+            // Focus and set value
+            mainInput.focus();
+            mainInput.value = currentID;
+
+            // Trigger UI updates
+            mainInput.dispatchEvent(new Event('input', { bubbles: true }));
+            mainInput.dispatchEvent(new Event('change', { bubbles: true }));
+
+            // Simulate the full Enter key sequence (Down, Press, Up)
+            // This is the "aggressive" fix to make the site recognize the submission
+            const eventOptions = { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true };
+            mainInput.dispatchEvent(new KeyboardEvent('keydown', eventOptions));
+            mainInput.dispatchEvent(new KeyboardEvent('keypress', eventOptions));
+            mainInput.dispatchEvent(new KeyboardEvent('keyup', eventOptions));
+
+            // WAIT: Adjust this time (in milliseconds) if the site is slow
+            await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+
+        status.innerText = "DONE! Batch complete.";
+        status.style.color = "green";
+    });
+
+    document.getElementById('clear-contents').addEventListener('click', async() => {
+        const myList = document.getElementById('bulk-tote-input');
+        myList.value = '';
+    });
+})();
