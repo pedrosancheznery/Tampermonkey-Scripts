@@ -6,8 +6,8 @@
 // @author       Pedro Sanchez (pefsanch)
 // @homepage     https://github.com/pedrosancheznery/Tampermonkey-Scripts/
 // @supportURL   https://issues.amazon.com/issues/create?template=20d9d000-e230-4011-bb9f-a862549aff64
-// @updateURL    https://axzile.corp.amazon.com/-/carthamus/download_script/yms-superuser-beta-version.user.js
-// @downloadURL  https://axzile.corp.amazon.com/-/carthamus/download_script/yms-superuser-beta-version.user.js
+// @updateURL    https://raw.githubusercontent.com/pedrosancheznery/Tampermonkey-Scripts/refs/heads/main/YMS%20Super%20User.js
+// @downloadURL  https://raw.githubusercontent.com/pedrosancheznery/Tampermonkey-Scripts/refs/heads/main/YMS%20Super%20User.js
 // @match        https://trans-logistics.amazon.com/yms/shipclerk*
 // @icon         data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==
 // @grant        none
