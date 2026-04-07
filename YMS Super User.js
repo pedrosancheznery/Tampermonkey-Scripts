@@ -4,9 +4,9 @@
 // @version      2026.04.05.01
 // @description  Quality Of Life improvements for YMS
 // @author       Pedro Sanchez (pefsanch)
-// @homepage     https://github.com/pedrosancheznery/Tampermonkey-Scripts/
-// @updateURL    https://raw.githubusercontent.com/pedrosancheznery/Tampermonkey-Scripts/refs/heads/main/YMS%20Super%20User.js
-// @downloadURL  https://raw.githubusercontent.com/pedrosancheznery/Tampermonkey-Scripts/refs/heads/main/YMS%20Super%20User.js
+// @homepage     https://github.com/pedrosancheznery/Tampermonkey-Scripts
+// @updateURL    https://raw.githubusercontent.com/pedrosancheznery/Tampermonkey-Scripts/main/YMS%20Super%20User.js
+// @downloadURL  https://raw.githubusercontent.com/pedrosancheznery/Tampermonkey-Scripts/main/YMS%20Super%20User.js
 // @match        https://trans-logistics.amazon.com/yms/shipclerk*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=amazon.com
 // @grant        none
