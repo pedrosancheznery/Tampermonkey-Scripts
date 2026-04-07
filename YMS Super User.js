@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         YMS Superuser
+// @name         YMS Superuser Alpha
 // @namespace    fyi.lamp.amzn
 // @version      2026.04.05.01
 // @description  Quality Of Life improvements for YMS
@@ -28,7 +28,6 @@
         }
     };
 
-    //let settings = {};
     let appliedFilter = "";
 
     const defaultSettings = {
@@ -94,17 +93,27 @@
             #dashboardEditTab { display: grid; grid-template-columns: 300px 1fr; height: calc(100% - 40px); overflow: hidden; }
             .dashboardCard { width: 140px; height: 140px; background: white; border: 2px solid black; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; }
             .dashboardCard h1 { font-size: 12px; margin: 0; text-align: center; }
-            .dashboardCard p { font-size: 40px; margin: 0; font-weight: bold; }
+            .dashboardCard p { font-size: 30px; margin: 0; font-weight: bold; }
             .edit-sidebar { border-right: 2px solid #ccc; background: #f5f5f5; display: flex; flex-direction: column; height: 100%; }
+            img.superuserSmallButton { width: 20px; height: 20px; border: 1px solid black; border-radius: 2px; padding: 2px; cursor: pointer; background-color: white; box-shadow: inset 10px 10px 10px 10px white; }
             .itemlistbox { flex: 1; overflow-y: auto; padding: 10px; }
             .itemlistitem { padding: 8px; background: #0071bc; color: white; margin-bottom: 2px; cursor: pointer; display: flex; align-items: center; gap: 10px; }
             .itemlistitem:hover { background: #2091dc; }
             .editor-workspace { padding: 20px; overflow-y: auto; background: white; }
             .filter-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
+            .logic-block { margin-bottom:20px; border:1px solid #000; padding:15px; position:relative; background:#fff; }
+            .miniCard { border:1px solid #ddd; padding:10px; background:#fcfcfc; }
+            .miniCardTitle { font-weight:bold; margin:0 0 8px 0; font-size:10px; text-transform:uppercase; color:#0071bc; }
+            .settingsInputContainer { display:grid; grid-template-columns: 1.2fr 1fr; gap:4px; font-size:11px;" }
+            .settingsFieldset { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: center; margin-bottom: 10px; }
             .settingsOption-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: center; margin-bottom: 10px; }
             .filterSaveOptions { display: flex; gap: 15px; padding-bottom: 20px; border-bottom: 2px solid #eee; margin-bottom: 20px; }
             .orangeButton { background: #C7511F; color: white; }
+            #quickViewContainer { display: flex; }
             .quickViewFilter {width: max-content;background-color: white;border: 1px solid black;border-radius: 0;color: black;padding: 2px;margin: 2px;}
+            .quickViewFilter { width: max-content; background-color: white; border: 1px solid black; border-radius: 0; color: black; padding: 2px; margin: 2px; }
+            .quickViewFilter h1 { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; max-width: 130px; overflow: hidden; font-size: 10px; padding: 0; }
+            .quickViewFilter p { font-size: 10px; font-weight: 900; }
             .superuser-loader {width: 12px;height: 12px;background-color: #22c55e; /* Green */border-radius: 50%;display: inline-block;margin-left: 10px;opacity: 0;transition: opacity 0.3s;}
             .superuser-loader.is-loading {opacity: 1;animation: pulse-green 1s infinite; }
             @keyframes pulse-green { 0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); } 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }}
@@ -353,14 +362,14 @@
             // Only add if not already present
             if ($el.parent().find(".superuserSmallButton").length === 0) {
                 $el.parent().append(
-                    $(`<img src="https://amazonaws.com"
+                    $(`<img src="https://nathanloppnowtools.s3.us-east-2.amazonaws.com/WhosThatDriver/copy.png"
                         class="superuserSmallButton superuserTooltip"
                         title="Copy Vehicle ID: ${number}"
                         style="cursor:pointer; width:16px; margin-left:5px;">`)
                     .on('click', function() {
                         navigator.clipboard.writeText(number.split(" ")[0]);
                         $(this).attr("src", "https://amazonaws.com");
-                        setTimeout(() => $(this).attr("src", "https://amazonaws.com"), 2000);
+                        setTimeout(() => $(this).attr("src", "https://nathanloppnowtools.s3.us-east-2.amazonaws.com/WhosThatDriver/copy.png"), 2000);
                     })
                 );
             }
@@ -420,27 +429,44 @@
         // 2. SIDEBAR REFRESH
         refreshList: function() {
             const container = $('#edit-list-container');
-            container.empty();
+
+            // Build everything as a single string for better performance
+            let html = '';
 
             Object.values(settings.dashboardCategories).forEach(cat => {
-                container.append(`
-                <div class="itemlistitem category-item" onclick="EditTabManager.openCategoryEditor('${cat.id}')"
-                     style="padding:8px; background:#00519c; color:white; font-weight:bold; margin-bottom:2px; cursor:pointer;">
-                    📁 ${cat.name}
-                </div>
-            `);
+                // Start the collapsible group
+                // Use 'open' attribute if you want them expanded by default
+                html += `
+        <details class="category-group" style="margin-bottom: 2px;">
+            <summary class="itemlistitem category-item"
+                     style="padding:8px; background:#00519c; color:white; font-weight:bold; cursor:pointer; list-style:none; outline:none;">
+                <span style="margin-right: 5px;">📁</span> ${cat.name}
+            </summary>
 
+            <div class="category-content">
+                <!-- Action button to edit the category itself -->
+                <div onclick="EditTabManager.openCategoryEditor('${cat.id}')"
+                     style="padding:5px 8px 5px 25px; background:#e1f0ff; color:#00519c; font-size:11px; cursor:pointer; border-bottom:1px solid #ccc;">
+                    ⚙️ Edit Category Name
+                </div>`;
+
+                // Add the filters belonging to this category
                 Object.values(settings.dashboardFilters)
                     .filter(f => f.category === cat.id)
                     .forEach(filter => {
-                    container.append(`
-                        <div class="itemlistitem filter-item" onclick="EditTabManager.openEditor('${filter.id}')"
-                             style="padding:8px 8px 8px 25px; background:white; color:black; border-bottom:1px solid #eee; cursor:pointer; font-size:12px;">
-                            • ${filter.title}
-                        </div>
-                    `);
+                    html += `
+                <div class="itemlistitem filter-item" onclick="EditTabManager.openEditor('${filter.id}')"
+                     style="padding:8px 8px 8px 25px; background:white; color:black; border-bottom:1px solid #eee; cursor:pointer; font-size:12px;">
+                    • ${filter.title}
+                </div>`;
                 });
+
+                html += `
+            </div>
+        </details>`;
             });
+
+            container.html(html);
         },
 
         // 3. CATEGORY LOGIC
@@ -586,8 +612,8 @@
             // ... (Keep your existing buildConditionBlock code here) ...
             const activeVals = new Map(filterStr.split(' ').filter(s => s.includes('=')).map(p => p.split('=')));
             const groupsHtml = Object.entries(schemaToUse).map(([key, group]) => `
-            <div style="border:1px solid #ddd; padding:10px; background:#fcfcfc;">
-                <p style="font-weight:bold; margin:0 0 8px 0; font-size:10px; text-transform:uppercase; color:#0071bc;">${group.name}</p>
+            <div class="miniCard">
+                <p class="miniCardTitle">${group.name}</p>
                 <div style="display:grid; grid-template-columns: 1.2fr 1fr; gap:4px; font-size:11px;">
                     ${group.values.map(v => {
                 const [label, fKey, type] = v.split('|');
@@ -607,7 +633,7 @@
             return `<fieldset class="logic-block" style="margin-bottom:20px; border:1px solid #000; padding:15px; position:relative; background:#fff;"><legend style="background:#0071bc; color:white; padding:2px 10px; font-weight:bold; font-size:12px;">Condition Group #${index + 1}</legend><button onclick="$(this).parent().remove()" style="position:absolute; top:-10px; right:10px; background:red; color:white; border:none; padding:2px 5px; cursor:pointer;">Remove</button><div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap:10px;">${groupsHtml}</div></fieldset>`;
         },
 
-        schema: { /* ... Include your full schema here ... */ }
+        schema: { }
     };
 
     window.EditTabManager = EditTabManager;
@@ -616,7 +642,7 @@
         const container = $("#tab-dashboard");
         container.empty();
         Object.entries(settings.dashboardCategories).forEach(([catId, cat]) => {
-            const deck = $(`<fieldset class="dashboardDeck"><legend>${cat.name}</legend></fieldset>`).appendTo(container);
+            const deck = $(`<fieldset class="dashboardDeck"><legend style="font-size: 14px; font-weight: bold">${cat.name}</legend></fieldset>`).appendTo(container);
             Object.values(settings.dashboardFilters).filter(f => f.category === catId).forEach(f => {
                 $(`<div class="dashboardCard" data-id="${f.id}">
                     <h1>${f.title}</h1>
@@ -716,6 +742,125 @@
         $(".currentFilterBox").click(() => applyFilter("", ""));
     };
 
+    function initializeSettingsTab() {
+        // 1. Helper for clean option generation
+        const genOptions = (opts) => opts.map(o => `<option value="${o.v}">${o.t}</option>`).join('');
+
+        // 2. Build entire HTML as one string
+        const html = `
+        <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap:10px;">
+        <div class="miniCard">
+            <p class="miniCardTitle">Auto-Update Intervals (Changes effective upon page reload)</p>
+            <p>It is highly recommended to keep these settings at the default or higher values.</p>
+            <div class="settingsInputContainer">
+                <p class="superuserHoverTooltip superuserTooltip" title="Notes Compliance Update">Notes Compliance</p>
+                <select class="superuserSelect" superUserSetting="refresh_notesCompliance">
+                    ${genOptions([{t:"1 Second",v:1000},{t:"5 Seconds",v:5000},{t:"10 Seconds (Default)",v:10000},{t:"30 Seconds",v:30000},{t:"1 Minute",v:60000}])}
+                </select>
+                <p class="superuserHoverTooltip superuserTooltip" title="Filter Update Speed">Filtered Results</p>
+                <select class="superuserSelect" superUserSetting="refresh_filteredResults">
+                    ${genOptions([{t:"1 Second",v:1000},{t:"5 Seconds (Default)",v:5000},{t:"1 Minute",v:60000}])}
+                </select>
+            </div>
+        </div>
+
+        <div class="miniCard">
+             <p class="miniCardTitle">Misc. Settings</p>
+            <div class="settingsInputContainer">
+                <p class="superuserHoverTooltip superuserTooltip" id="autoselectYardText" title="Auto-select site">Amazon Account Auto-Select Site</p>
+                <input class="superuserSelect" superUserSetting="autoselectYard" type="text">
+            </div>
+        </div>
+
+        <div class="miniCard">
+             <p class="miniCardTitle">IXD Settings</p>
+            <div class="settingsInputContainer">
+                <p class="superuserHoverTooltip superuserTooltip" title="BOL Verification Buttons">BOL Verification</p>
+                <select class="superuserSelect" superUserSetting="ixd_bol"><option value="1">Enabled</option><option value="0">Disabled</option></select>
+                <p class="superuserHoverTooltip superuserTooltip" title="Blue Flag Buttons">Blue Flag Trailer Options</p>
+                <select class="superuserSelect" superUserSetting="ixd_blueflag"><option value="1">Enabled</option><option value="0">Disabled</option></select>
+                <p class="superuserHoverTooltip superuserTooltip" title="IXD YMS Codes">IXD QuickNotes Dropdown</p>
+                <select class="superuserSelect" superUserSetting="ixd_notes"><option value="1">Enabled</option><option value="0">Disabled</option></select>
+            </div>
+        </div>
+
+        <div class="miniCard">
+             <p class="miniCardTitle superuserTooltip" title="Enable Seal Notes">
+                <input superUserSetting="enable_sealNotes" class="enableFeatureCheckbox" type="checkbox"> Seal Notes
+            </p>
+            <div class="settingsInputContainer"></div>
+        </div>
+
+        <div class="miniCard">
+             <p class="miniCardTitle superuserTooltip" title="Enable Notes Compliance">
+                <input superUserSetting="enable_notesCompliance" class="enableFeatureCheckbox" type="checkbox"> Notes Compliance
+            </p>
+            <div class="settingsInputContainer">
+                <p class="superuserHoverTooltip superuserTooltip" title="Hours until red flag">Red Flag Limit</p>
+                <select class="superuserSelect" superUserSetting="notesCompliance_redFlagLimit">
+                    ${genOptions([{t:"0 Hours",v:0},{t:"4 Hours",v:4},{t:"12 Hours",v:12},{t:"24 Hours",v:24},{t:"48 Hours",v:48},{t:"72 Hours",v:72}])}
+                </select>
+                <p class="superuserHoverTooltip superuserTooltip" title="Hours until yellow flag">Yellow Flag Limit</p>
+                <select class="superuserSelect" superUserSetting="notesCompliance_yellowFlagLimit">
+                    ${genOptions([{t:"0 Hours",v:0},{t:"4 Hours",v:4},{t:"12 Hours",v:12},{t:"24 Hours",v:24},{t:"48 Hours",v:48}])}
+                </select>
+            </div>
+        </div>
+        <p class="tooltipText" style="display:none;">-</p>
+        </div>
+    `;
+
+        // 3. Batch Injection
+        const $tab = $("#tab-settings").empty().append(html);
+        const $inputs = $tab.find("[superUserSetting]");
+
+        // 4. Optimized Value Initialization (No eval)
+        $inputs.each(function() {
+            const path = $(this).attr("superUserSetting").split('.');
+            let val = path.reduce((obj, key) => (obj && obj[key] !== undefined) ? obj[key] : undefined, settings);
+
+            if ($(this).is(":checkbox")) {
+                $(this).prop("checked", !!val);
+            } else {
+                $(this).val(val);
+            }
+        });
+
+        // 5. Delegated Event Handling (Cleaner & Faster)
+        $tab.on("change", "[superUserSetting]", function() {
+            const $el = $(this);
+            const path = $el.attr("superUserSetting").split('.');
+            const val = $el.is(":checkbox") ? $el.prop("checked") : $el.val();
+
+            // Update nested settings object dynamically
+            let target = settings;
+            for (let i = 0; i < path.length - 1; i++) {
+                if (!target[path[i]]) target[path[i]] = {};
+                target = target[path[i]];
+            }
+            target[path[path.length - 1]] = val;
+
+            saveSettings();
+        });
+
+        // 6. Tooltip Logic
+        $tab.on("mouseenter mouseleave", "[superuserHoverText]", function(e) {
+            const $tip = $(".tooltipText");
+            if (e.type === "mouseenter") {
+                $tip.text($(this).attr("superuserHoverText")).show();
+            } else {
+                $tip.hide().text("-");
+            }
+        });
+
+        // 7. Cleanup: Hide empty fieldsets
+        $tab.find("fieldset.settingsFieldset").each(function() {
+            if ($(this).find(".settingsInputContainer").children().length === 0 && !$(this).find('input').length) {
+                $(this).hide();
+            }
+        });
+    }
+
     // Ensure jQuery and original styles are loaded first
     const init = () => {
         if (!window.jQuery) {
@@ -738,7 +883,7 @@
             .settingsOption-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; align-items: center; font-size: 12px; }
         `).appendTo("head");
 
-        const filterDiv = $(`<div style="position:fixed; top:10px; right:50%; transform:translateX(50%); z-index:99; display:flex;" id="filters"></div>`).appendTo("#top-section");
+        const filterDiv = $("#mainContainer").prepend("<div id='dashboardQuickView' class='flex-container'><div id='filters' class='flex-container'></div></div>");
 
         // 3. Initialize the original script's setup()
         // This ensures your original Dashboard and Tabs are built first
@@ -760,7 +905,7 @@
         injectStyles();
         initPanel();
         initLaunchButton();
-        //EditTabManager.render();
+        initializeSettingsTab();
         // Optimized Unified Interval
         setInterval(() => {
             window.updateCategories();
@@ -801,7 +946,7 @@
             if (shouldUpdate) {
                 const container = document.getElementById("filters");
                 if (!container) {
-                    const filterDiv = $(`<div style="position:fixed; top:10px; right:50%; transform:translateX(50%); z-index:99; display:flex;" id="filters"></div>`).appendTo("#top-section");
+                    const filterDiv = $("#mainContainer").prepend("<div id='dashboardQuickView' class='flex-container'><div id='filters' class='flex-container'></div></div>");
                 }
                 console.log("YMS Superuser: Changes detected, scanning...");
                 window.updateCategories();
@@ -828,5 +973,3 @@
 
 })
 ();
-
-
