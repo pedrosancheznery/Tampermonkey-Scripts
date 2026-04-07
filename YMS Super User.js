@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         YMS Superuser Alpha
+// @name         YMS Superuser
 // @namespace    fyi.lamp.amzn
 // @version      2026.04.05.01
 // @description  Quality Of Life improvements for YMS
