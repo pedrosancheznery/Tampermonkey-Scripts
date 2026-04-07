@@ -8,7 +8,7 @@
 // @updateURL    https://raw.githubusercontent.com/pedrosancheznery/Tampermonkey-Scripts/refs/heads/main/YMS%20Super%20User.js
 // @downloadURL  https://raw.githubusercontent.com/pedrosancheznery/Tampermonkey-Scripts/refs/heads/main/YMS%20Super%20User.js
 // @match        https://trans-logistics.amazon.com/yms/shipclerk*
-// @icon         data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==
+// @icon         https://www.google.com/s2/favicons?sz=64&domain=amazon.com
 // @grant        none
 // @require      https://code.jquery.com/jquery-3.7.0.min.js
 // @require      https://ajax.googleapis.com/ajax/libs/jqueryui/1.13.2/jquery-ui.min.js
