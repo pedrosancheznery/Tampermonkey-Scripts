@@ -34,6 +34,9 @@
         enable_notesCompliance: true,
         enable_sealNotes: false,
         enable_DDUDoors: false,
+        enable_dd_range: false,
+        dd_range_min: 1,
+        dd_range_max: 999,
         ixd_bol: 0,
         ixd_blueflag: 0,
         ixd_notes: 0,
@@ -307,6 +310,7 @@
                 else $row.removeAttr("dwell");
             }
 
+            if (settings.enable_dd_range ) applyDockDoorFilter();
             // --- Final Attribute Stamping ---
             $row.attr("category_scac", scac);
             $row.attr("category_operator", operator);
@@ -690,10 +694,14 @@
     const initPanel = () => {
         const panelHtml = `
         <div id="superuserPanel">
-            <div id="superuserHeader">
-            <span>YMS Superuser v3.0 <div id="superuser-status" class="superuser-loader"></div></span>
-            <button id="closePanel" class="redButton yms-button">X</button>
-            </div>
+    <div id="superuserHeader" style="display: flex; align-items: center; justify-content: space-between; padding: 5px 10px;">
+        <!-- Empty div to balance the flex space so the title stays truly centered -->
+        <div style="width: 30px;"></div>
+        <span style="flex-grow: 1; text-align: center; font-weight: bold;">
+            YMS Superuser v3.0 <div id="superuser-status" class="superuser-loader" style="display:inline-block;"></div>
+        </span>
+        <button id="closePanel" class="redButton yms-button" style="width: 30px;">X</button>
+    </div>
             <div id="tabsList" style="display:flex; background:#eee; padding:5px; gap:5px; border-bottom:1px solid #000;">
                 <div class="yms-button blueButton superuserTabActive" data-tab="dashboard">Dashboard</div>
                 <div class="yms-button blueButton" data-tab="edit">Edit Dashboard</div>
@@ -785,17 +793,14 @@
         </div>
 
         <div class="miniCard">
+             <p class="miniCardTitle superuserTooltip" title="Notes Compliance">
+                Notes Compliance
+            </p>
+            <div class="settingsInputContainer">
              <p class="miniCardTitle superuserTooltip" title="Enable Seal Notes">
                 <input superUserSetting="enable_sealNotes" class="enableFeatureCheckbox" type="checkbox"> Seal Notes
             </p>
-            <div class="settingsInputContainer"></div>
-        </div>
-
-        <div class="miniCard">
-             <p class="miniCardTitle superuserTooltip" title="Enable Notes Compliance">
-                <input superUserSetting="enable_notesCompliance" class="enableFeatureCheckbox" type="checkbox"> Notes Compliance
-            </p>
-            <div class="settingsInputContainer">
+            <input superUserSetting="enable_notesCompliance" class="enableFeatureCheckbox" type="checkbox">Enable Notes Compliance
                 <p class="superuserHoverTooltip superuserTooltip" title="Hours until red flag">Red Flag Limit</p>
                 <select class="superuserSelect" superUserSetting="notesCompliance_redFlagLimit">
                     ${genOptions([{t:"0 Hours",v:0},{t:"4 Hours",v:4},{t:"12 Hours",v:12},{t:"24 Hours",v:24},{t:"48 Hours",v:48},{t:"72 Hours",v:72}])}
@@ -806,6 +811,16 @@
                 </select>
             </div>
         </div>
+<div class="miniCard">
+     <p class="miniCardTitle">Dock Door Filter Range</p>
+    <div class="settingsInputContainer">
+                <input superUserSetting="enable_dd_range" class="enableFeatureCheckbox" type="checkbox"><p class="superuserHoverTooltip" title="Enable Range">Enable Dock Door Range</p>
+        <p class="superuserHoverTooltip" title="Minimum DD Number">Min DD#</p>
+        <input class="superuserSelect" superUserSetting="dd_range_min" type="number" placeholder="1">
+        <p class="superuserHoverTooltip" title="Maximum DD Number">Max DD#</p>
+        <input class="superuserSelect" superUserSetting="dd_range_max" type="number" placeholder="999">
+    </div>
+</div>
         <p class="tooltipText" style="display:none;">-</p>
         </div>
     `;
@@ -857,6 +872,31 @@
         $tab.find("fieldset.settingsFieldset").each(function() {
             if ($(this).find(".settingsInputContainer").children().length === 0 && !$(this).find('input').length) {
                 $(this).hide();
+            }
+        });
+    }
+
+    function applyDockDoorFilter() {
+        const min = parseInt(settings.dd_range_min) || 1;
+        const max = parseInt(settings.dd_range_max) || 999;
+        const rangeActive = settings.enable_dd_range;
+
+        $(".masterYardLP tr.ng-scope").each(function() {
+            const $row = $(this);
+            const ddText = $row.find(".short-name-distinguished a.ng-binding").text().trim();
+            // Regex matches "DD" followed by numbers
+            const doorMatch  = ddText.match(/DD(\d+)$/);
+
+            if ( rangeActive && doorMatch ) {
+                const ddNumber = parseInt(doorMatch [1]);
+                //console.debug(rangeActive, min, max, doorMatch[1]);
+                if (ddNumber >= min && ddNumber <= max) {
+                    $row.show();
+                } else {
+                    $row.hide();
+                }
+            } else {
+                $row.show();
             }
         });
     }
