@@ -9,8 +9,7 @@
 // @downloadURL  https://raw.githubusercontent.com/pedrosancheznery/Tampermonkey-Scripts/main/YMS%20Super%20User.js
 // @match        https://trans-logistics.amazon.com/yms/shipclerk*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=amazon.com
-// @grant        GM_setValue
-// @grant        GM_getValue
+// @grant        none
 // @require      https://code.jquery.com/jquery-3.7.0.min.js
 // @require      https://ajax.googleapis.com/ajax/libs/jqueryui/1.13.2/jquery-ui.min.js
 // ==/UserScript==
@@ -88,7 +87,6 @@
     };
 
     let settings = JSON.parse(localStorage.getItem("YMSSuperuserSettings")) || {};
-    let currentFilter = GM_getValue('activeYMSFilter', null);
 
     // ========== CSS Updates (Grid-Based Editor) ==========
     const injectStyles = () => {
@@ -201,72 +199,6 @@
             }).join("");
         }).join(", ");
     };
-
-    // Internal helper to update the text area and trigger UI updates
-    function commitNoteChange(newText) {
-        const $textArea = $("#noteTextArea");
-        $textArea.val(newText.trim() + "\n"); // Ensures clean spacing
-        $textArea[0].dispatchEvent(new Event("change"));
-    }
-
-    function updateSealPresent(status = $("#sealPresentSelect").val()) {
-        if (status === "NA") return;
-
-        const currentNotes = $("#noteTextArea").val();
-        commitNoteChange(`${status}\n${currentNotes}`);
-    }
-
-    function updateYMSNote() {
-        const $select = $("#quickNoteSelect");
-        const status = $select.val();
-
-        if (status !== "NA") {
-            const currentNotes = $("#noteTextArea").val();
-            commitNoteChange(`${status}\n${currentNotes}`);
-
-            // Reset dropdown to default
-            $select.val("NA");
-        }
-    }
-
-    function updateTagStatus(status) {
-        if (!status || status === "NA") return;
-
-        let lines = $("#noteTextArea").val().split("\n");
-        let linesToSkip = 0;
-        const firstLine = lines[0];
-
-        // Find if the first line matches any YMS code to preserve formatting
-        $("#quickNoteSelect option").each(function() {
-            const val = $(this).val();
-            if (val !== "NA" && val.split("\n")[0] === firstLine) {
-                linesToSkip = val.split("\n").length;
-                return false; // Break loop
-            }
-        });
-
-        // Insert the tag status after the skipped lines
-        lines.splice(linesToSkip, 0, status);
-
-        commitNoteChange(lines.join("\n"));
-    }
-
-    function saveFilterState(filterValue, name) {
-        const filterData = {
-            filter: filterValue,
-            name: name
-        };
-        if ( currentFilter == null ) {
-            GM_setValue('activeYMSFilter', JSON.stringify(filterData));
-            currentFilter = filterData;
-            console.log( `Saved filter: %c${name}: \r${filterValue}`, "font-weight: bold");
-        }
-        if ( name != currentFilter.name && filterValue != currentFilter.filter ) {
-            GM_setValue('activeYMSFilter', JSON.stringify(filterData));
-            currentFilter = filterData;
-            console.log( `Resaved filter: %c${name}: \r${filterValue}`, "font-weight: bold");
-        }
-    }
 
     // ========== Core Engine ==========
     window.updateCategories = function(force = false) {
@@ -463,7 +395,7 @@
     };
 
     const applyFilter = (filter, name) => {
-        //appliedFilter = filter;
+        appliedFilter = filter;
         const selector = filter ? getCSSSelectorFromFilter(filter) : null;
 
         document.querySelectorAll("tbody.masterYardLP > tr").forEach(row => {
@@ -471,168 +403,8 @@
             else row.style.display = row.matches(selector) ? "" : "none";
         });
 
-        $(".currentFilterBox").toggle(!!filter).text(`Filter: ${name}`);
-        console.log( `Applied filter: %c${name}: \r\n%c${filter}`, "font-weight:bold", "font-weight:normal" );
-        saveFilterState(filter, name);
+        $("#currentFilterBox").toggle(!!filter).text(`Filter: ${name}`);
     };
-
-    function updateNotesDisplay() {
-        $("#noteEditForm").each(function () {
-            const $form = $(this);
-            if ($form.find("#superuserNotesDiv").length > 0) return;
-
-            // 1. Data Extraction & Setup
-            const modalBody = $("#yms-annotation-modal-body");
-            const thisCarrier = modalBody.find("#noteValues :nth-child(2)").text().trim();
-            const thisID = modalBody.find("#noteValues :nth-child(3)").text().trim();
-            const noteText = $form.find("#noteTextArea").val() || "";
-
-            const $btnHolder = $("<div>", { id: "notesButtonsHolder", style: "width: 80%; margin-bottom: 10px;" });
-            const $notesDiv = $("<div>", { id: "superuserNotesDiv", style: "display: inline-block;" });
-
-            $form.prepend($btnHolder);
-            $form.append($notesDiv);
-
-            // 2. Carrier-Specific Buttons (Relay Garage)
-            const garageCarriers = ["AZNG", "AZNU", "AZNA"];
-            if (garageCarriers.includes(thisCarrier)) {
-                const garageBase = "https://amazon.com";
-
-                const garageBtns = [
-                    { text: "View Unplanned Services", url: `${garageBase}817ca098-8441-4329-a71e-6768f9d7e6c5?tab=Unplanned&ids=${thisID}` },
-                    { text: "View Planned Services", url: `${garageBase}817ca098-8441-4329-a71e-6768f9d7e6c5?ids=${thisID}` },
-                    { text: "New Unplanned Service", url: `${garageBase}891a81dc-538d-4f10-be93-441545840a24`, click: () => navigator.clipboard.writeText(thisID) }
-                ];
-
-                garageBtns.forEach(btn => {
-                    const $a = $("<a>", { target: "_blank", href: btn.url })
-                    .append($("<p>", { class: "yms-button blueButton superuserTooltip", text: btn.text }));
-                    if (btn.click) $a.on('click', btn.click);
-                    $btnHolder.append($a);
-                });
-
-                if (noteText.toLowerCase().includes("tagged")) {
-                    $btnHolder.append($("<a>", { target: "_blank", href: "https://amazon.com" })
-                                      .append($("<p>", { class: "yms-button greenButton superuserTooltip", text: "Open Flip SIM" })));
-                }
-            }
-
-            // 3. Dynamic Link Detection
-            const httpRegex = /https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)/g;
-            const linkMatches = noteText.match(httpRegex);
-
-            if (linkMatches) {
-                const linkMap = [
-                    { match: ["://amazon.com", "://amazon.com", "://amazon.com"], label: "Open SIM" },
-                    { match: ["://amazon.com"], label: "Open AAP" },
-                    { match: ["://amazon.com"], label: "Open Paragon" }
-                ];
-
-                linkMatches.forEach(link => {
-                    let label = "Open Link";
-                    const found = linkMap.find(m => m.match.some(domain => link.includes(domain)));
-                    if (found) label = found.label;
-
-                    $btnHolder.append($("<a>", { target: "_blank", href: link })
-                                      .append($("<p>", { class: "yms-button blueButton superuserTooltip", text: label, title: `Opens ${link}` })));
-                });
-            }
-
-            // 4. Seal & Tagging Section
-            if (settings.enable_sealNotes) {
-                const $sealDiv = $("<div>", { id: "sealStatusDiv", style: "display: flex;" }).appendTo($notesDiv);
-                const $sealSelect = $("<select>", { id: "sealPresentSelect", class: "superuserSelect superuserFont" }).on("change", updateSealPresent);
-
-                const sealOptions = [
-                    ["Seal Status", "NA"], ["Yes", "Yes seal at CI"], ["No", "No seal at CI"],
-                    ["Undetermined - CI Miss", "Undetermined seal condition due to check-in miss"],
-                    ["Undetermined - Weather", "Undetermined seal condition due to weather conditions"],
-                    ["Undetermined - Camera", "Undetermined seal condition due to camera issues"],
-                    ["Undetermined - Visibility", "Undetermined seal condition due to visibility problems"],
-                    ["Undetermined (Must add reason)", "Undetermined seal condition due to "]
-                ];
-                sealOptions.forEach(opt => $sealSelect.append(new Option(opt[0], opt[1])));
-                $sealDiv.append($sealSelect);
-
-                $sealDiv.append($("<p>", { text: "Yes Seal", class: "yms-button blueButton quickNoteButton" }).click(() => updateSealPresent("Yes seal at CI")));
-                $sealDiv.append($("<p>", { text: "No Seal", class: "yms-button blueButton quickNoteButton" }).click(() => updateSealPresent("No seal at CI")));
-                $notesDiv.append("<br>");
-            }
-
-            // 5. BOL & Blue Flag
-            if (settings.ixd_bol == "1") {
-                const $bolDiv = $("<div>", { id: "bolStatusDiv", style: "display: flex;" }).appendTo($notesDiv);
-                $bolDiv.append($("<p>", { text: "Yes Seal On BOL", class: "yms-button blueButton quickNoteButton" }).click(() => updateSealPresent("BOLWSEAL")));
-                $bolDiv.append($("<p>", { text: "No Seal On BOL", class: "yms-button blueButton quickNoteButton" }).click(() => updateSealPresent("BOLWOUTSEAL")));
-
-                if (settings.ixd_blueflag == "1") {
-                    $notesDiv.append("<br>");
-                    const $bfDiv = $("<div>", { id: "blueFlagStatusDiv", style: "display: flex;" }).appendTo($notesDiv);
-                    const bfFlags = ["Mismatch Seal", "Missing Seal", "Tampered Seal"];
-                    bfFlags.forEach(f => {
-                        $bfDiv.append($("<p>", { text: `Blue Flag - ${f}`, class: "yms-button blueButton quickNoteButton" }).click(() => updateSealPresent(`Blue Flag Trailer\n${f}`)));
-                    });
-                } else {
-                    $bolDiv.append($("<p>", { text: "Blue Flag", class: "yms-button blueButton quickNoteButton" }).click(() => updateSealPresent("Blue Flag Trailer")));
-                }
-                $notesDiv.append("<br>");
-            }
-
-            // 6. Tags & DateTime
-            const currentDateTime = new Date().toLocaleString();
-            const $tagDiv = $("<div>", { id: "tagStatusDiv", style: "display: flex;" }).appendTo($notesDiv);
-            const tagStyles = [
-                { text: "Yellow Tag", cls: "yellowButton", val: "YELLOW TAGGED\nCASE NUMBER: \nYELLOW TAGGED BY: \nISSUE: \n" },
-                { text: "Red Tag", cls: "redButton", val: "RED TAGGED\nCASE NUMBER: \nRED TAGGED BY: \nISSUE: \n" },
-                { text: "Insert Date/time", cls: "whiteButton", val: currentDateTime }
-            ];
-            tagStyles.forEach(t => {
-                $tagDiv.append($("<p>", { text: t.text, class: `yms-button ${t.cls} quickNoteButton` }).click(() => updateTagStatus(t.val)));
-            });
-
-            // 7. YMS Codes Dropdown
-            $notesDiv.append("<br>");
-            const $ymsSelect = $("<select>", { id: "quickNoteSelect", class: "superuserSelect width100 superuserFont" }).on("change", updateYMSNote);
-            $ymsSelect.append(new Option("Add YMS Code...", "NA"));
-
-            const ymsData = {
-                "Inbound": [
-                    ["Inbound Problem Solve", "IBPROBSOLV"], ["Inbound Vendor", "IBVEND"], ["Unsellables", "IBUNSELL"],
-                    ["Customer Returns", "IBCRET"], ["Transship", "IBTRANS"], ["Undeliverables", "IBUNDELIV"],
-                    ["Misship - Requires Case", "IBMISSHIP\nCase: \n"], ["Rejection - Requires Case", "IBREJECT\nCase: \n"],
-                    ["Inbound Found Loaded", "IBFoundLoaded \n"], ["Inbound Donations", "IBDONATE"], ["Loaded Trailer for launch", "FULLPOD"]
-                ],
-                "Outbound": [
-                    ["OB Scheduled - >24hr", "OBSCHED"], ["OB Late - Past SDT", "OBLATE"], ["OB Trailer Hand Off", "OBTHO"],
-                    ["OB Vender Returns", "OBVRET"], ["OB Misloaded Trailer", "OBMISLOAD"],
-                    ["OB Liq/Don/Rmv", `TOM SDN: OBSCHED\nRELO SDN: HOU3SCHED\nLoad Content Description: RMV-LIQ\nLogin: pefsanch\nDate: ${new Date().toLocaleDateString('en-US')}\nEscalation Needed? (Y/N) N\nEscalation OM Login: \nSIM Link: \nOther Notes: \n`]
-                ],
-                "Non-Inventory": [
-                    ["Empty Go Carts", "NICARTS"], ["Broken Go Carts", "NIBADCARTS"], ["Empty Totes (Yellow)", "NITOTES"],
-                    ["Universal Pallets", "NIUPP"], ["Good Wood Pallets", "NIWOOD"], ["Broken Wood Pallets", "NIBADWOOD"],
-                    ["Consumables", "NICONSUM"], ["Loaded Recycling", "RMVREC"]
-                ],
-                "Empty": [
-                    ["IB 3P Empty", "IBEMPTY"], ["OB 3P Empty", "OBEMPTY"], ["Non-Inventory Empty", "NIEMPTY"], ["Empty POD", "EMPTYPOD"]
-                ]
-            };
-
-            Object.keys(ymsData).forEach(groupLabel => {
-                const $group = $("<optgroup>", { label: groupLabel });
-                ymsData[groupLabel].forEach(opt => $group.append(new Option(opt[0], opt[1])));
-                $ymsSelect.append($group);
-            });
-
-            if (settings.ixd_notes == "1") {
-                const $ixdGroup = $("<optgroup>", { label: "IXD" });
-                const ixdOpts = [["OB Scheduled <24hr", "OBRTD"], ["OB Trans-load", "OBTRANSLOAD"], ["OB Departed Action", "OBDEPARTED"]];
-                ixdOpts.forEach(opt => $ixdGroup.append(new Option(opt[0], opt[1])));
-                $ymsSelect.append($ixdGroup);
-            }
-
-            $notesDiv.append($ymsSelect);
-        });
-    }
 
     // ========== UI Builders ==========
     const EditTabManager = {
@@ -880,7 +652,6 @@
                     <h1>${f.title}</h1>
                     <p filters="${f.filters}">0</p>
                 </div>`).on('click', () => {
-                    console.debug(`%cApply: ${f.title} - ${f.filters}`, "font-weight:bold;font-size:14px");
                     applyFilter(f.filters, f.title);
                     $("#superuserPanel").hide();
                 }).appendTo(deck);
@@ -971,13 +742,12 @@
         const btn = $(`
             <div style="position:fixed; top:10px; right:50%; transform:translateX(50%); z-index:9999; display:flex;">
                 <button class="yms-button blueButton" id="openSuperuser">Dashboard <span id="notifBadge" class="notificationsCount" style="display:none">0</span></button>
-                <div class="currentFilterBox yms-button orangeButton" style="display:none"></div>
+                <button class="yms-button orangeButton" id="currentFilterBox" style="background: #C7511F"></button>
             </div>
         `).appendTo("body");
 
         $("#openSuperuser").click(() => $("#superuserPanel").toggle());
-        //$(".currentFilterBox").click(() => applyFilter("", ""));
-        $(".currentFilterBox").click(() => applyFilter(currentFilter.filter, currentFilter.name));
+        $("#currentFilterBox").hide().click(() => applyFilter("", ""));
     };
 
     function initializeSettingsTab() {
@@ -1171,7 +941,6 @@
     const setup = () => {
         const saved = localStorage.getItem("YMSSuperuserSettings");
         settings = saved ? JSON.parse(saved) : defaultSettings;
-        currentFilter = GM_getValue('activeYMSFilter', null);
 
         injectStyles();
         initPanel();
@@ -1195,51 +964,38 @@
     };
 
     const startObserver = () => {
+        // We observe the body to ensure we don't lose the observer if YMS recreates the table
         const targetNode = document.body;
 
         const observer = new MutationObserver((mutations) => {
-            let tableChanged = false;
-            let modalOpened = false;
+            // Use a flag to avoid triggering multiple times per batch update
+            let shouldUpdate = false;
 
             for (const mutation of mutations) {
-                // 1. Check for Table/Row updates (for Dashboard/Categories)
-                const hasNewRows = Array.from(mutation.addedNodes).some(node =>
-                    node.nodeName === 'TR' || (node.querySelector && node.querySelector('tr'))
-                );
-                if (hasNewRows) tableChanged = true;
+                // Check if rows were added to the master yard table
+                const addedRows = Array.from(mutation.addedNodes).some(node =>
+                                                                       node.nodeName === 'TR' || (node.querySelector && node.querySelector('tr'))
+                                                                      );
 
-                // 2. Check for Note Modal opening
-                const hasNoteForm = Array.from(mutation.addedNodes).some(node =>
-                    node.id === 'noteEditForm' || (node.querySelector && node.querySelector('#noteEditForm'))
-                );
-                if (hasNoteForm) modalOpened = true;
-                if (tableChanged && modalOpened) break; // Optimization: stop if both found
-            }
-
-            // Task A: Handle Dashboard/Filters
-            if (tableChanged) {
-                if (!document.getElementById("filters")) {
-                    $("#mainContainer").prepend("<div id='dashboardQuickView' class='flex-container'><div id='filters' class='flex-container'></div></div>");
-                }
-                console.log("YMS Superuser: Table changes detected, updating categories...");
-                console.log( `Current: %c${currentFilter.name}`, "font-weight:bold" );
-                if (typeof window.updateCategories === "function") window.updateCategories();
-
-                if (currentFilter) {
-                    //const filter = JSON.parse(currentFilter);
-                    applyFilter(currentFilter.filter, currentFilter.name);
+                if (addedRows) {
+                    shouldUpdate = true;
+                    break;
                 }
             }
 
-            // Task B: Handle Notes Modal Refactor
-            if (modalOpened || $("#noteEditForm").length > 0) {
-                // We check length > 0 as a fallback to ensure we catch it
-                updateNotesDisplay();
+            if (shouldUpdate) {
+                const container = document.getElementById("filters");
+                if (!container) {
+                    const filterDiv = $("#mainContainer").prepend("<div id='dashboardQuickView' class='flex-container'><div id='filters' class='flex-container'></div></div>");
+                }
+                console.log("YMS Superuser: Changes detected, scanning...");
+                window.updateCategories();
             }
         });
 
+        // CRITICAL: subtree must be true to catch changes inside the table
         observer.observe(targetNode, { childList: true, subtree: true });
-        console.log("YMS Superuser: Integrated MutationObserver active.");
+        console.log("YMS Superuser: High-level MutationObserver active.");
     };
 
     // Start
