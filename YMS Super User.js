@@ -12,6 +12,7 @@
 // @grant        none
 // @require      https://code.jquery.com/jquery-3.7.0.min.js
 // @require      https://ajax.googleapis.com/ajax/libs/jqueryui/1.13.2/jquery-ui.min.js
+// @run-at       document-end
 // ==/UserScript==
 
 (function() {
@@ -107,7 +108,7 @@
             .logic-block { margin-bottom:20px; border:1px solid #000; padding:15px; position:relative; background:#fff; }
             .miniCard { border:1px solid #ddd; padding:10px; background:#fcfcfc; }
             .miniCardTitle { font-weight:bold; margin:0 0 8px 0; font-size:10px; text-transform:uppercase; color:#0071bc; }
-            .settingsInputContainer { display:grid; grid-template-columns: 1.2fr 1fr; gap:4px; font-size:11px;" }
+            .settingsInputContainer { display:grid; grid-template-columns: 1.2fr 1fr; gap:4px; font-size:11px; }
             .settingsFieldset { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: center; margin-bottom: 10px; }
             .settingsOption-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: center; margin-bottom: 10px; }
             .filterSaveOptions { display: flex; gap: 15px; padding-bottom: 20px; border-bottom: 2px solid #eee; margin-bottom: 20px; }
@@ -119,28 +120,18 @@
             .quickViewFilter p { font-size: 10px; font-weight: 900; }
             .superuser-loader {width: 12px;height: 12px;background-color: #22c55e; /* Green */border-radius: 50%;display: inline-block;margin-left: 10px;opacity: 0;transition: opacity 0.3s;}
             .superuser-loader.is-loading {opacity: 1;animation: pulse-green 1s infinite; }
-            @keyframes pulse-green { 0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); } 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }}
-            .yms-button { cursor: pointer; padding: 5px 10px; border: 1px solid black; font-weight: bold; }
-`;
-        $("<style>").html(style).appendTo("head");
-    };
-
-    // ========== CSS Injection ==========
-    /*
-    const injectStyles = () => {
-        const style = `
-            #superuserPanel { width: 85%; height: 800px; background: #e0e0e0; z-index: 2000; position: fixed; top: 50px; left: 50%; transform: translateX(-50%); border: 1px solid black; box-shadow: 0 0 10px black; color: black; display: none; overflow: hidden; font-family: Verdana, sans-serif; }
-            #superuserHeader { background: #0071bc; color: white; padding: 10px; display: flex; justify-content: space-between; align-items: center; }
-            .notificationsCount { background: red; color: white; border-radius: 50%; padding: 2px 6px; font-size: 10px; position: absolute; top: -5px; right: -5px; }
-            .blueButton { background: #0071bc; color: white; }
-            .redButton { background: #dd2222; color: white; }
             .superuserTabActive { background: #00519c !important; }
             [dwell='red'] .col11 { background-color: #ffcccc !important; border: 2px solid red !important; }
             [dwell='yellow'] .col11 { background-color: #fff9c4 !important; border: 2px solid orange !important; }
-        `;
+			#tabsList { display: flex; background: #f1f1f1; padding: 10px 10px 0 10px; /* Top/Sides padding, 0 bottom */ gap: 2px; border-bottom: 1px solid #ccc; }
+			.super-tab { padding: 8px 16px; cursor: pointer; font-size: 13px; color: #666; border: 1px solid transparent; border-bottom: none; border-radius: 4px 4px 0 0; transition: all 0.2s ease; background: #e0e0e0; }
+			.super-tab:hover { background: #e8e8e8; color: #333; }
+			.super-tab.active { background: #205493 !important; color: #fff !important; font-weight: bold; border-color: #ccc; position: relative; top: 1px; /* Overlaps the container border to look connected */ }
+			#panelContent { height: calc(100% - 85px); background: white; border-top: none; /* Let the tabsList border handle the top */ }
+            @keyframes pulse-green { 0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); } 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }}
+`;
         $("<style>").html(style).appendTo("head");
     };
-    */
 
     // ========== Utility Functions ==========
     function isMoreThan72(inputText) {return getDwellTime(inputText) > 72 * 60 * 60;}
@@ -371,6 +362,7 @@
                         title="Copy Vehicle ID: ${number}"
                         style="cursor:pointer; width:16px; margin-left:5px;">`)
                     .on('click', function() {
+                        e.stopPropagation();
                         navigator.clipboard.writeText(number.split(" ")[0]);
                         $(this).attr("src", "https://amazonaws.com");
                         setTimeout(() => $(this).attr("src", "https://nathanloppnowtools.s3.us-east-2.amazonaws.com/WhosThatDriver/copy.png"), 2000);
@@ -482,8 +474,8 @@
                 <label>Category Name:</label><br>
                 <input type="text" id="edit-cat-name" value="${cat.name}" style="width:100%; padding:8px; margin-top:5px;">
             </div>
-            <button class="yms-button blueButton" onclick="EditTabManager.saveCategory('${id}')">Save Category</button>
-            <button class="yms-button redButton" onclick="EditTabManager.deleteCategory('${id}')" style="background:#dd2222; color:white;">Delete Category</button>
+            <button class="yms-button" onclick="EditTabManager.saveCategory('${id}')">Save Category</button>
+            <button class="yms-button-secondary" onclick="EditTabManager.deleteCategory('${id}')">Delete Category</button>
         `);
         },
 
@@ -562,9 +554,9 @@
                     <select id="edit-filter-cat" style="width:100%; padding:8px;">${catOptions}</select>
                 </div>
                 <div style="display:flex; gap:5px; align-items:flex-end; padding-top:15px;">
-                    <button class="yms-button blueButton" onclick="EditTabManager.saveFilter('${id}')">Save</button>
+                    <button class="yms-button" onclick="EditTabManager.saveFilter('${id}')">Save</button>
                     <button class="yms-button orangeButton" onclick="EditTabManager.addCondition()">+ OR</button>
-                    <button class="yms-button redButton" onclick="EditTabManager.deleteFilter('${id}')" style="background:#dd2222; color:white;">Del</button>
+                    <button class="yms-button-secondary" onclick="EditTabManager.deleteFilter('${id}')">Del</button>
                 </div>
             </div>
             <div id="sub-filter-container">${subFilters.map((sf, idx) => this.buildConditionBlock(sf, idx)).join('')}</div>
@@ -700,12 +692,12 @@
         <span style="flex-grow: 1; text-align: center; font-weight: bold;">
             YMS Superuser v3.0 <div id="superuser-status" class="superuser-loader" style="display:inline-block;"></div>
         </span>
-        <button id="closePanel" class="redButton yms-button" style="width: 30px;">X</button>
+        <button id="closePanel" class="yms-button-secondary" style="width: 30px;">X</button>
     </div>
             <div id="tabsList" style="display:flex; background:#eee; padding:5px; gap:5px; border-bottom:1px solid #000;">
-                <div class="yms-button blueButton superuserTabActive" data-tab="dashboard">Dashboard</div>
-                <div class="yms-button blueButton" data-tab="edit">Edit Dashboard</div>
-                <div class="yms-button blueButton" data-tab="settings">Settings</div>
+                <div class="super-tab active" data-tab="dashboard">Dashboard</div>
+                <div class="super-tab" data-tab="edit">Edit Dashboard</div>
+                <div class="super-tab" data-tab="settings">Settings</div>
             </div>
             <div id="panelContent" style="height:calc(100% - 85px); background:white;">
                 <div id="tab-dashboard" class="panel-tab"></div>
@@ -724,8 +716,8 @@
             const target = $(this).data('tab');
 
             // UI Updates
-            $("[data-tab]").removeClass("superuserTabActive");
-            $(this).addClass("superuserTabActive");
+            $("[data-tab]").removeClass("active");
+            $(this).addClass("active");
             $(".panel-tab").hide();
             $(`#tab-${target}`).show();
 
@@ -741,7 +733,7 @@
     const initLaunchButton = () => {
         const btn = $(`
             <div style="position:fixed; top:10px; right:50%; transform:translateX(50%); z-index:9999; display:flex;">
-                <button class="yms-button blueButton" id="openSuperuser">Dashboard <span id="notifBadge" class="notificationsCount" style="display:none">0</span></button>
+                <button class="yms-button" id="openSuperuser">Dashboard <span id="notifBadge" class="notificationsCount" style="display:none">0</span></button>
                 <button class="yms-button orangeButton" id="currentFilterBox" style="background: #C7511F"></button>
             </div>
         `).appendTo("body");
@@ -909,27 +901,13 @@
             return;
         }
 
-        // 1. Re-inject the original styles from Part 1-5
-        // (I'm assuming 'style' variable from your original parts is available)
-        //$("<style>").html(style).appendTo("head");
-
-        // 2. Add the NEW Edit Tab styles
-        $("<style>").html(`
-            #dashboardEditTab { display: grid; grid-template-columns: 300px 1fr; height: 710px; overflow: hidden; background: #fff; }
-            .edit-sidebar { border-right: 2px solid #ccc; background: #f5f5f5; display: flex; flex-direction: column; height: 100%; }
-            .itemlistbox { flex: 1; overflow-y: auto; padding: 5px; border: 1px solid #000; }
-            .editor-workspace { padding: 15px; overflow-y: auto; background: white; border-top: 1px solid #ccc; }
-            .filter-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
-            .settingsOption-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; align-items: center; font-size: 12px; }
-        `).appendTo("head");
-
         const filterDiv = $("#mainContainer").prepend("<div id='dashboardQuickView' class='flex-container'><div id='filters' class='flex-container'></div></div>");
 
-        // 3. Initialize the original script's setup()
+        // 1. Initialize the original script's setup()
         // This ensures your original Dashboard and Tabs are built first
         if (typeof setup === "function") setup();
 
-        // 4. Overwrite the Edit Tab initializer to use the new High-Performance Manager
+        // 2. Overwrite the Edit Tab initializer to use the new High-Performance Manager
         window.initializeDashboardEditTab = function() {
             EditTabManager.render();
         };
@@ -973,9 +951,7 @@
 
             for (const mutation of mutations) {
                 // Check if rows were added to the master yard table
-                const addedRows = Array.from(mutation.addedNodes).some(node =>
-                                                                       node.nodeName === 'TR' || (node.querySelector && node.querySelector('tr'))
-                                                                      );
+                const addedRows = Array.from(mutation.addedNodes).some(node => node.nodeName === 'TR' || (node.querySelector && node.querySelector('tr')) );
 
                 if (addedRows) {
                     shouldUpdate = true;
@@ -1000,8 +976,6 @@
 
     // Start
     if (window.jQuery) {
-        //setup();
-        //window.EditTabManager = EditTabManager;
         init();
    }
     else {
