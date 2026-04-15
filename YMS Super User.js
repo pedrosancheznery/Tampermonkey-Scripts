@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YMS Superuser
 // @namespace    fyi.lamp.amzn
-// @version      2026.04.05.02
+// @version      2026.04.05.01
 // @description  Quality Of Life improvements for YMS
 // @author       Pedro Sanchez (pefsanch)
 // @homepage     https://github.com/pedrosancheznery/Tampermonkey-Scripts
@@ -396,30 +396,43 @@
     window.updateLicensePlateCopyButtons = function() {
         if (!settings.showLicenseCopy) return;
 
-        // Target the specific AngularJS spans for vehicle numbers
-        const selector = "span[ng-if*='vehicleNumber'], span[ng-if*='licensePlateIdentifier'], div[ng-show*='vehicleNumber']";
+        const selector = "span[ng-if='yardAsset.vehicleNumber'], span[ng-if='yardAsset.licensePlateIdentifier && yardAsset.licensePlateIdentifier.registrationIdentifier'], div[ng-show='move.yardAssets[0].vehicleNumber']";
+        const copyUrl = "https://nathanloppnowtools.s3.us-east-2.amazonaws.com/WhosThatDriver/copy.png";
+        const checkUrl = "https://nathanloppnowtools.s3.us-east-2.amazonaws.com/WhosThatDriver/check.png";
 
-        $(selector).each(function() {
-            const $el = $(this);
-            const number = $el.text().split("\n")[0].trim();
+        $(selector).each(function () {
+            const $this = $(this);
+            const text = ($this.html() || "").split("<br>")[0].trim();
+            const plate = text.split(" ")[0] || "";
+            if (!plate) return;
 
-            // Only add if not already present
-            if ($el.parent().find(".superuserSmallButton").length === 0) {
-                $el.parent().append(
-                    $(`<img src="https://nathanloppnowtools.s3.us-east-2.amazonaws.com/WhosThatDriver/copy.png"
-                        class="superuserSmallButton superuserTooltip"
-                        title="Copy Vehicle ID: ${number}"
-                        style="cursor:pointer; width:16px; margin-left:5px;">`)
-                    .on('click', function() {
-                        e.stopPropagation();
-                        navigator.clipboard.writeText(number.split(" ")[0]);
-                        $(this).attr("src", "https://amazonaws.com");
-                        setTimeout(() => $(this).attr("src", "https://nathanloppnowtools.s3.us-east-2.amazonaws.com/WhosThatDriver/copy.png"), 2000);
-                    })
-                );
-            }
+            // choose a sensible container to append the button; adjust if needed
+            const $container = $this.closest("div, td, tr").first();
+            if ($container.find("img.superuserSmallButton").length) return;
+
+            const $btn = $("<img>", {
+                class: "superuserSmallButton superuserTooltip",
+                title: "Copy to clipboard",
+                src: copyUrl,
+                "data-plate": plate
+            });
+            $container.append($btn);
         });
-    };
+
+        // delegated handler (idempotent: remove previous namespace then attach)
+        $(document).off("click.copyPlate").on("click.copyPlate", "img.superuserSmallButton", function () {
+            const $btn = $(this);
+            const plate = $btn.data("plate") || "";
+            if (!plate || !navigator.clipboard) return;
+
+            navigator.clipboard.writeText(plate).then(function () {
+                $btn.attr("src", checkUrl);
+                setTimeout(function () { $btn.attr("src", copyUrl); }, 3000);
+            }).catch(function (err) {
+                console.error("Copy failed", err);
+            });
+        });
+    }
 
     // Refactored DDU Logic
     window.updateDDUDisplay = function() {
