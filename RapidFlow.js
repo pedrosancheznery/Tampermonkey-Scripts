@@ -8,6 +8,9 @@
 // @match        https://sortcenter-menu-na.amazon.com/containermovement/*
 // @match        https://sortcenter-menu-na.amazon.com/containerization/flow*
 // @require      https://code.jquery.com/jquery-3.4.0.min.js
+// @homepage     https://github.com/pedrosancheznery/Tampermonkey-Scripts
+// @downloadURL  https://raw.githubusercontent.com/pedrosancheznery/Tampermonkey-Scripts/refs/heads/main/RapidFlow.js
+// @updateURL    https://raw.githubusercontent.com/pedrosancheznery/Tampermonkey-Scripts/refs/heads/main/RapidFlow.js
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=amazon.com
 // @grant        none
 // ==/UserScript==
@@ -21,7 +24,7 @@
         const uiHtml = `
             <div id="RapidFlow" style="position: fixed; top: 50px; right: 10px; z-index: 9999; background: #f9f9f9; border: 1px solid #ccc; padding: 15px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 300px; font-family: sans-serif;">
                 <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <b>RapidFlow v1.2</b>
+                    <b>RapidFlow v1.0.2</b>
                     <button id="tf_clear" style="font-size: 10px; padding: 2px 5px; cursor: pointer;">Clear All</button>
                 </div>
                 <input type="text" id="tf_dst" placeholder="Destination Container" style="width: 100%; margin-bottom: 5px; padding: 5px; box-sizing: border-box;">
