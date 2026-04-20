@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Extract Scannable IDs in FCResearch (Copy to Clipboard)
 // @namespace    HOU3
-// @version      1.0.2
+// @version      1.0.3
 // @author       Pedro Sanchez (pefsanch)
 // @description  Extract scannable IDs from container hierarchy and copy to clipboard via a button (only containers with qty > 0)
 // @match        https://qi-fcresearch-na.corp.amazon.com/HOU3/*
@@ -80,6 +80,7 @@
             if (ids.length === 0) {
                 btn.textContent = 'No IDs with qty > 0';
                 setTimeout(() => btn.textContent = 'Copy Scannable IDs', 2000);
+                document.getElementById('search').focus();
                 return;
             }
             const text = ids.join('\n');
