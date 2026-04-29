@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         PNP Automation Tool
 // @namespace    HOU3
-// @version      1.1.1.23
+// @version      1.1.1.24
 // @description  Automate palletization by processing a list of IDs via the PNP tool logic; logs unprocessed totes and continues on error modals
 // @author       Pedro Sanchez (pefsanch)
 // @match        https://pnp-iad.aka.amazon.com/pnp
@@ -96,7 +96,7 @@
         // Unprocessed Totes heading + table
         const unprocessedDiv = document.createElement('div');
         unprocessedDiv.id = "unprocessed-div";
-        unprocessedDiv.style = "position:fixed;bottom:50;left:310px;margin-top:10px;font-weight:bold;display:none;";
+        unprocessedDiv.style = "background:white;border:2px solid rgb(35, 47, 62);border-radius:4px;box-shadow:rgba(0, 0, 0, 0.1) 0px 4px 6px;font-family:Arial, sans-serif;font-size:13px;position:fixed;bottom:50px;left:310px;margin-top:10px;font-weight:bold;width:300px;display:none;";
         const unprocessedHeading = document.createElement('div');
         unprocessedHeading.id = "unprocessed-heading";
         unprocessedHeading.innerText = "Unprocessed Totes";
