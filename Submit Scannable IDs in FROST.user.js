@@ -21,7 +21,7 @@
     GM_addStyle(`
         #tote-log-container {
             position: fixed;
-            top: 250px;
+            bottom: 95px;
             left: 270px;
             width: 400px;
             background-color: #f9f9f9;
@@ -121,7 +121,7 @@
         const modal = document.createElement('div');
         modal.id = 'inputModal';
         modal.style.position = 'fixed';
-        modal.style.top = '250px';
+        modal.style.bottom = '95px';
         modal.style.left = '10px';
         //modal.style.transform = 'translate(-50%, -50%)';
         modal.style.padding = '15px';
