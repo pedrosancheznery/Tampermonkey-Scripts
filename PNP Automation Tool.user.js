@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         PNP Automation Tool
 // @namespace    HOU3
-// @version      1.1.1.22
+// @version      1.1.1.23
 // @description  Automate palletization by processing a list of IDs via the PNP tool logic; logs unprocessed totes and continues on error modals
 // @author       Pedro Sanchez (pefsanch)
 // @match        https://pnp-iad.aka.amazon.com/pnp
@@ -96,7 +96,7 @@
         // Unprocessed Totes heading + table
         const unprocessedDiv = document.createElement('div');
         unprocessedDiv.id = "unprocessed-div";
-        unprocessedDiv.style = "margin-top:10px;font-weight:bold;display:none;";
+        unprocessedDiv.style = "position:fixed;bottom:50;left:310px;margin-top:10px;font-weight:bold;display:none;";
         const unprocessedHeading = document.createElement('div');
         unprocessedHeading.id = "unprocessed-heading";
         unprocessedHeading.innerText = "Unprocessed Totes";
@@ -123,7 +123,7 @@
         unprocessedTableDiv.appendChild(unprocessedTable);
         unprocessedHeading.appendChild(unprocessedTableDiv);
         unprocessedDiv.appendChild(unprocessedHeading);
-        container.appendChild(unprocessedDiv);
+        document.body.appendChild(unprocessedDiv);
         document.body.appendChild(container);
 
         // Wire button click
