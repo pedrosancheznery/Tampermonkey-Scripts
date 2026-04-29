@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Submit Scannable IDs in FROST
 // @namespace    HOU3
-// @version      1.1.15
+// @version      1.1.16
 // @author       Pedro Sanchez (pefsanch)
 // @description  Read scannable IDs from user input and submit them to a form
 // @match        https://frost-prod-jlb-iad.iad.proxy.amazon.com/packnhold/create
@@ -70,7 +70,7 @@
         const logContainer = document.createElement('div');
         logContainer.id = 'tote-log-container';
         logContainer.innerHTML = `
-            <h4>Tote Scan History</h4>
+            <h4>Tote History</h4>
             <table id="tote-error-log-table">
                 <thead>
                     <tr>
@@ -135,7 +135,7 @@
         //modal.style.display = 'none'; // Hidden by default
 
         const header = document.createElement('div');
-        header.innerHTML = '<b style="display:block; margin-bottom:5px;">Bulk Tote Pack And Hold</b>';
+        header.innerHTML = '<b style="display:block; margin-bottom:5px;">Tote Pack And Hold</b>';
         modal.appendChild(header);
 
         const pasteButton = document.createElement('button');
