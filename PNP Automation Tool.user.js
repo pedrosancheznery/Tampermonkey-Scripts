@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         PNP Automation Tool
 // @namespace    HOU3
-// @version      1.1.1.24
+// @version      1.1.1.3
 // @description  Automate palletization by processing a list of IDs via the PNP tool logic; logs unprocessed totes and continues on error modals
 // @author       Pedro Sanchez (pefsanch)
 // @match        https://pnp-iad.aka.amazon.com/pnp
@@ -96,14 +96,14 @@
         // Unprocessed Totes heading + table
         const unprocessedDiv = document.createElement('div');
         unprocessedDiv.id = "unprocessed-div";
-        unprocessedDiv.style = "background:white;border:2px solid rgb(35, 47, 62);border-radius:4px;box-shadow:rgba(0, 0, 0, 0.1) 0px 4px 6px;font-family:Arial, sans-serif;font-size:13px;position:fixed;bottom:50px;left:310px;margin-top:10px;font-weight:bold;width:300px;display:none;";
+        unprocessedDiv.style = "background:white;border:2px solid rgb(35, 47, 62);border-radius:4px;box-shadow:rgba(0, 0, 0, 0.1) 0px 4px 6px;font-family:Arial, sans-serif;font-size:13px;height:465px;position:fixed;bottom:50px;left:310px;margin-top:10px;overflow-y:auto;font-weight:bold;width:300px;display:none;";
         const unprocessedHeading = document.createElement('div');
         unprocessedHeading.id = "unprocessed-heading";
         unprocessedHeading.innerText = "Unprocessed Totes";
         //unprocessedHeading.style = "margin-top:10px;font-weight:bold;";
         const unprocessedTableDiv = document.createElement('div');
         unprocessedTableDiv.id = "unprocessed-table-div";
-        unprocessedTableDiv.style = "max-height: 250px; overflow-y: auto";
+        //unprocessedTableDiv.style = "max-height: 250px; overflow-y: auto";
         const unprocessedTable = document.createElement('table');
         unprocessedTable.id = "unprocessed-totes-table";
         unprocessedTable.style = "width:100%;border-collapse:collapse;margin-top:6px;font-size:12px;border:1px solid #ddd;";
@@ -169,6 +169,7 @@
         tbody.innerHTML = '';
         textarea.disabled = true;
         paxInput.disabled = true;
+        altpaxInput.disabled = true;
         failCount = 0;
         successCount = 0;
 
@@ -283,6 +284,7 @@
 
         textarea.disabled = false;
         paxInput.disabled = false;
+        altpaxInput.disabled = false;
         textarea.value = "";
         status.innerText = `Finished! Processed ${lines.length} items`;
         status.style.color = "green";
