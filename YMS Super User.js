@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YMS Superuser
 // @namespace    fyi.lamp.amzn
-// @version      2026.04.05.01
+// @version      2026.04.05.02
 // @description  Quality Of Life improvements for YMS
 // @author       Pedro Sanchez (pefsanch)
 // @homepage     https://github.com/pedrosancheznery/Tampermonkey-Scripts
@@ -83,7 +83,8 @@
         },
         "other": {
             "name": "Other",
-            "values": ["Has VRID|hasvrid", "Has ISA|hasisa", "Has YMS Note|hasymsnote", "Has Seal Note|hassealnote", "Blue Flag|blueflag", "Long Dwell|longdwell", "Parking Slip|parkingslip", "Dock Door|dockdoor", "Off Site|offsite"]
+	        "values": ["Has VRID|hasVRID", "Has ISA|hasISA", "Has YMS Note|hasymsnote", "Has Seal Note|hassealnote","Has Good Wood Pallets Note|hasgoodwoodpalletsnote", "Has Bad Wood Pallets Note|hasbadwoodpalletsnote","Has Universal Pallets Note|hasuppnote", "Has Empty Totes Note|hasemptytotesnote", "Has BOL Note|hasbolnote", "Blue Flag|blueflag", "Long Dwell (>72hours)|longdwell", "Parking Slip|parkingslip", "Dock Door|dockdoor", "Off Site|offsite"]
+            //"values": ["Has VRID|hasvrid", "Has ISA|hasisa", "Has YMS Note|hasymsnote", "Has Seal Note|hassealnote", "Blue Flag|blueflag", "Long Dwell|longdwell", "Parking Slip|parkingslip", "Dock Door|dockdoor", "Off Site|offsite"]
         }
     };
 
