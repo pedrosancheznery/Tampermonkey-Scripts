@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         RapidFlow - SAM Compatible (Refactored)
 // @namespace    HOU3
-// @version      1.0.3
+// @version      1.0.4
 // @description  Rapid flow containers with improved performance and error handling.
 // @author       Pedro Sanchez (pefsanch)
 // @match        http://sortcenter-menu-na.amazon.com/containermovement/*
@@ -106,7 +106,7 @@ Duplicates Ignored: ${duplicateCount}
 
         $status.val((i, old) => old + report);
         $status.scrollTop($status[0].scrollHeight);
-        $submitBtn.prop('disabled', false).text('Turbo FLOW!').css('background', '#007bff');
+        $submitBtn.prop('disabled', false).text('Rapid FLOW!').css('background', '#007bff');
 
         if (lastFailures.length > 0) {
             $exportBtn.show().text(`Download ${lastFailures.length} Failures (.txt)`);
