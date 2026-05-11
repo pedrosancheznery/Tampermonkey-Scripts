@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         RapidFlow - SAM Compatible (Refactored)
 // @namespace    HOU3
-// @version      1.0.4
+// @version      1.0.5
 // @description  Rapid flow containers with improved performance and error handling.
 // @author       Pedro Sanchez (pefsanch)
 // @match        http://sortcenter-menu-na.amazon.com/containermovement/*
@@ -22,16 +22,16 @@
 
     const setupUI = () => {
         const uiHtml = `
-            <div id="RapidFlow" style="position: fixed; top: 50px; right: 10px; z-index: 9999; background: #f9f9f9; border: 1px solid #ccc; padding: 15px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 300px; font-family: sans-serif;">
+            <div id="RapidFlow" style="position: fixed; top: 50px; right: 10px; z-index: 9999; background: #f9f9f9; border: 1px solid #ccc; padding: 15px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                 <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <b>RapidFlow v1.0.2</b>
+                    <b>RapidFlow v1.0.5</b>
                     <button id="tf_clear" style="font-size: 10px; padding: 2px 5px; cursor: pointer;">Clear All</button>
                 </div>
                 <input type="text" id="tf_dst" placeholder="Destination Container" style="width: 100%; margin-bottom: 5px; padding: 5px; box-sizing: border-box;">
                 <textarea id="tf_moveList" placeholder="Containers (one per line)" rows="8" style="width: 100%; margin-bottom: 5px; padding: 5px; resize: vertical; box-sizing: border-box;"></textarea>
                 <button id="tf_submit" style="width: 100%; padding: 10px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">Rapid Flow!</button>
                 <textarea id="tf_status" placeholder="Results..." rows="10" readonly style="width: 100%; margin-top: 10px; font-size: 11px; background: #eee; border: 1px inset #ccc; box-sizing: border-box;"></textarea>
-                <button id="tf_export" style="display:none; width: 100%; margin-top: 5px; padding: 5px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Download Failed List (.txt)</button>
+                <button id="tf_export" style="display:none; width: 100%; margin-top: 5px; padding: 5px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">Download Failures (.txt)</button>
             </div>
         `;
         $('body').append(uiHtml);
@@ -69,10 +69,11 @@
         $status.val(`Starting batch move of ${items.length} containers...${duplicateCount > 0 ? ` (${duplicateCount} duplicates ignored)` : ''}\n\n`);
 
         const successList = [];
+        const alreadyScanned = [];
 
         for (const item of items) {
             try {
-                await $.ajax({
+                const response = await $.ajax({
                     type: "POST",
                     url: "/containerization/backend/moveContainer",
                     contentType: "application/json",
@@ -85,8 +86,14 @@
                         subContainerId: null
                     })
                 });
-                successList.push(item);
-                $status.val((i, old) => old + `[OK] ${item}\n`);
+                
+                if (response && response.status === 'MovementToSameParent') {
+                    alreadyScanned.push(item);
+                    $status.val((i, old) => old + `[ALREADY SCANNED] ${item}\n`);
+                } else {
+                    successList.push(item);
+                    $status.val((i, old) => old + `[OK] ${item}\n`);
+                }
             } catch (err) {
                 lastFailures.push(item);
                 $status.val((i, old) => old + `[FAIL] ${item}\n`);
@@ -100,6 +107,7 @@ FINAL REPORT
 --------------------------
 Total Unique: ${items.length}
 Success: ${successList.length}
+Already Scanned: ${alreadyScanned.length}
 Failed: ${lastFailures.length}
 Duplicates Ignored: ${duplicateCount}
 --------------------------`;
