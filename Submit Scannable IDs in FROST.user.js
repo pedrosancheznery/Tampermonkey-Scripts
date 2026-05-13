@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Submit Scannable IDs in FROST
 // @namespace    HOU3
-// @version      1.1.16
+// @version      1.1.17
 // @author       Pedro Sanchez (pefsanch)
 // @description  Read scannable IDs from user input and submit them to a form
 // @match        https://frost-prod-jlb-iad.iad.proxy.amazon.com/packnhold/create
@@ -175,7 +175,7 @@
 
         const submitButton = document.createElement('button');
         submitButton.innerText = "▶ Process";
-        submitButton.style = "width: 60%; padding: 10px; cursor: pointer; background: #28a745; color: white; border: none; border-radius: 4px; font-weight: bold;";
+        submitButton.style = "width: 60%; padding: 8px; cursor: pointer; background: #28a745; color: white; border: none; border-radius: 4px; font-weight: bold;";
         submitButton.onclick = () => {
             // Split input by newline and trim whitespace
             const ids = input.value.split('\n').map(id => id.trim()).filter(id => id); // Clean and filter
@@ -185,7 +185,7 @@
         modal.appendChild(submitButton);
 
         const clearButton = document.createElement('button');
-        clearButton.style = "width: 30%; padding: 10px; cursor: pointer; background: #cc0000; color: white; border: none; border-radius: 4px; font-weight: bold; margin-left: 10px";
+        clearButton.style = "width: 30%; padding: 8px; cursor: pointer; background: #cc0000; color: white; border: none; border-radius: 4px; font-weight: bold; margin-left: 10px";
         clearButton.innerText = "Clear";
         clearButton.onclick = () => {
             document.getElementById("scannableIdsInput").value = "";
@@ -200,7 +200,7 @@
 
         const statusBar = document.createElement("div");
         statusBar.id = "check-status";
-        statusBar.style = "margin-top: 8px; font-size: 12px; color: #555; font-weight: bold;";
+        statusBar.style = "margin-top: 8px; font-size: 13px; color: #555; font-weight: bold;";
         statusBar.innerText = "Ready";
 
         modal.appendChild(statusBar);
@@ -238,7 +238,7 @@
             //const toteId = id;
             status.innerText = `Processing (${i + 1}/${scannableIDs.length}): ${id}`;
             status.style.color = "blue";
-            console.log(`Processing ID: ${id}`);
+            //console.log(`Processing ID: ${id}`);
             document.querySelector('#scannableIds').value = id; // Set ID value
             $("#submitPnHForm").submit(); // Submit the form
 
@@ -295,7 +295,7 @@
                     }
                     resolve(true); // Resolve the promise
                 }
-            }, 500); // Check every 500 milliseconds
+            }, 600); // Check every 600 milliseconds
 
             // Optional: Set a timeout to stop polling after a certain period
             setTimeout(() => {
