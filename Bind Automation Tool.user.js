@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bind Automation Tool
 // @namespace    HOU3
-// @version      1.0.1
+// @version      1.0.2
 // @description  Automate binding by processing a list of IDs via the Bind tool logic; logs unprocessed totes and continues on error modals
 // @author       Pedro Sanchez (pefsanch)
 // @match        https://tx-b-hierarchy-iad.iad.proxy.amazon.com/bindHierarchy
@@ -154,17 +154,31 @@
     // --- wait for success message ---
     function waitForSuccessMessage(timeoutMs = 8000) {
         return new Promise((resolve) => {
-            console.log("[Bind Automation] Checking First Modal")
+            console.log("[Bind Automation] Checking First Modal");
             let resolved = false;
             const observer = new MutationObserver((mutations) => {
                 for (const mutation of mutations) {
                     const successStep = document.querySelector('.binding-summary-container');
                     const msg = document.querySelector(".modal-message");
-                    // Check if .success-step is visible
+                    // Check if .binding-summary-container is visible
                     if (successStep && successStep.offsetParent !== null) {
-                        console.log("Found success-step element!", successStep);
+                        console.log("Found binding-summary-container element!", successStep);
                         if (msg && msg.innerText.includes("Current bindings for")) {
-                            if (!resolved) {
+                            // Additional check: look for <ul><li> structure
+                            const ulElement = successStep.querySelector('ul');
+                            if (ulElement) {
+                                const liElements = ulElement.querySelectorAll('li');
+                                if (liElements.length > 0) {
+                                    console.log("Found binding list with", liElements.length, "items");
+                                    if (!resolved) {
+                                        resolved = true;
+                                        observer.disconnect();
+                                        resolve({ type: 'success' });
+                                        return;
+                                    }
+                                }
+                            } else if (!resolved) {
+                                // Fallback: if no <ul> but message has "Current bindings for", still resolve
                                 resolved = true;
                                 observer.disconnect();
                                 resolve({ type: 'success' });
@@ -283,14 +297,14 @@
             if (h4) reason = h4.textContent.trim();
             //reason.match(emptyregex);
             let match = reason.match(emptyregex);
-            if ( match && match[1] != '' ) {
+            if ( match && match[1] !== '' ) {
                 console.log('Matched:' , match[1]);
                 realReason = match[1];
                 reason = realReason;
             } else {
                 //reason.match(palletizedregex);
                 match = reason.match(palletizedregex);
-                if ( match && match[1] != '' ) {
+                if ( match && match[1] !== '' ) {
                     console.log('Matched:' , match[1]);
                     realReason = match[1];
                     reason = realReason;
