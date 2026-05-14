@@ -20,8 +20,7 @@
         // Container
         const container = document.createElement('div');
         container.id = 'tm-bind-automation';
-        container.style = "position: fixed; bottom: 50px; left: 10px; z-index: 9999; background: white; border: 2px solid #232f3e; padding: 10px; border-radius: 4px; box-shadow: 0 4px 6px rgba(0,0,0,0[...]
-
+        container.style = "position: fixed; bottom: 50px; left: 10px; z-index: 9999; background: white; border: 2px solid #232f3e; padding: 10px; border-radius: 4px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 300px; font-family: Arial, sans-serif; font-size: 13px;";
         // PAX label/input
         //const label2 = document.createElement('label');
         //label2.innerText = "PAX Label:";
@@ -58,7 +57,7 @@
         const unprocessedTable = document.createElement('table');
         unprocessedTable.id = "unprocessed-totes-table";
         unprocessedTable.style = "width:100%;border-collapse:collapse;margin-top:6px;font-size:12px;border:1px solid #ddd;";
-        unprocessedTable.innerHTML = '<thead><tr><th style="border:1px solid #ddd;padding:4px;text-align:left">Tote</th><th style="border:1px solid #ddd;padding:4px;text-align:left">Reason</th></tr></[...]
+        unprocessedTable.innerHTML = '<thead><tr><th style="border:1px solid #ddd;padding:4px;text-align:left">Tote</th><th style="border:1px solid #ddd;padding:4px;text-align:left">Reason</th></tr></thead><tbody></tbody>';
 
         // Append elements
         //container.appendChild(label2);
@@ -155,16 +154,16 @@
     // --- wait for success message ---
     function waitForSuccessMessage(timeoutMs = 8000) {
         return new Promise((resolve) => {
-            console.log("Checking First Modal")
+            console.log("[Bind Automation] Checking First Modal")
             let resolved = false;
             const observer = new MutationObserver((mutations) => {
                 for (const mutation of mutations) {
-                    const successStep = document.querySelector('.success-step');
-                    const msg = document.querySelector(".success-step-label");
+                    const successStep = document.querySelector('.binding-summary-container');
+                    const msg = document.querySelector(".modal-message");
                     // Check if .success-step is visible
                     if (successStep && successStep.offsetParent !== null) {
                         console.log("Found success-step element!", successStep);
-                        if (msg && msg.innerText.includes("Successfully bound")) {
+                        if (msg && msg.innerText.includes("Current bindings for")) {
                             if (!resolved) {
                                 resolved = true;
                                 observer.disconnect();
