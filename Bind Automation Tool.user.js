@@ -160,15 +160,17 @@
             const observer = new MutationObserver((mutations) => {
                 for (const mutation of mutations) {
                     const successStep = document.querySelector('.success-step');
-                    
+                    const msg = document.querySelector(".success-step-label");
                     // Check if .success-step is visible
                     if (successStep && successStep.offsetParent !== null) {
                         console.log("Found success-step element!", successStep);
-                        if (!resolved) {
-                            resolved = true;
-                            observer.disconnect();
-                            resolve({ type: 'success' });
-                            return;
+                        if (msg && msg.innerText.includes("Successfully bound")) {
+                            if (!resolved) {
+                                resolved = true;
+                                observer.disconnect();
+                                resolve({ type: 'success' });
+                                return;
+                            }
                         }
                     }
                 }
