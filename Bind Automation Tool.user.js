@@ -20,7 +20,7 @@
         // Container
         const container = document.createElement('div');
         container.id = 'tm-bind-automation';
-        container.style = "position: fixed; bottom: 50px; left: 10px; z-index: 9999; background: white; border: 2px solid #232f3e; padding: 10px; border-radius: 4px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 300px; font-family: Arial, sans-serif; font-size: 13px;";
+        container.style = "position: fixed; bottom: 50px; left: 10px; z-index: 9999; background: white; border: 2px solid #232f3e; padding: 10px; border-radius: 4px; box-shadow: 0 4px 6px rgba(0,0,0,0[...]
 
         // PAX label/input
         //const label2 = document.createElement('label');
@@ -58,7 +58,7 @@
         const unprocessedTable = document.createElement('table');
         unprocessedTable.id = "unprocessed-totes-table";
         unprocessedTable.style = "width:100%;border-collapse:collapse;margin-top:6px;font-size:12px;border:1px solid #ddd;";
-        unprocessedTable.innerHTML = '<thead><tr><th style="border:1px solid #ddd;padding:4px;text-align:left">Tote</th><th style="border:1px solid #ddd;padding:4px;text-align:left">Reason</th></tr></thead><tbody></tbody>';
+        unprocessedTable.innerHTML = '<thead><tr><th style="border:1px solid #ddd;padding:4px;text-align:left">Tote</th><th style="border:1px solid #ddd;padding:4px;text-align:left">Reason</th></tr></[...]
 
         // Append elements
         //container.appendChild(label2);
@@ -159,19 +159,17 @@
             let resolved = false;
             const observer = new MutationObserver((mutations) => {
                 for (const mutation of mutations) {
-                    const messageContainer = document.querySelector('.modal-message');
-                    const continueBtn = document.querySelector('.continue-btn');
-
-                    if (messageContainer && continueBtn) {
-                        console.log("Found them!", messageContainer, continueBtn);
-                       //if (header && header.innerText.includes("Current bindings")) {
-                            if (!resolved) {
-                                resolved = true;
-                                observer.disconnect();
-                                resolve({ type: 'success' });
-                                return;
-                            }
-                        //}
+                    const successStep = document.querySelector('.success-step');
+                    
+                    // Check if .success-step is visible
+                    if (successStep && successStep.offsetParent !== null) {
+                        console.log("Found success-step element!", successStep);
+                        if (!resolved) {
+                            resolved = true;
+                            observer.disconnect();
+                            resolve({ type: 'success' });
+                            return;
+                        }
                     }
                 }
             });
