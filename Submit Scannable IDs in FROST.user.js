@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Submit Scannable IDs in FROST
 // @namespace    HOU3
-// @version      1.1.18
+// @version      1.1.19
 // @author       Pedro Sanchez (pefsanch)
 // @description  Read scannable IDs from user input and submit them to a form
 // @match        https://frost-prod-jlb-iad.iad.proxy.amazon.com/packnhold/create
@@ -106,13 +106,13 @@
     let successCount = 0;
     let failCount = 0;
     
-    // paste into a specific textarea element
-    async function pasteIntoTextarea(textarea) {
+    // Function to copy textarea content to clipboard
+    async function copyToClipboard(textarea) {
         try {
-            const text = await navigator.clipboard.readText(); // requires HTTPS and user gesture
-            textarea.value = text;
+            await navigator.clipboard.writeText(textarea.value);
+            console.log('Copied to clipboard');
         } catch (err) {
-            console.error('Clipboard read failed:', err);
+            console.error('Clipboard write failed:', err);
         }
     }
     
@@ -168,7 +168,9 @@
                         const textarea = document.getElementById('scannableIdsInput');
                         if (textarea) {
                             textarea.value = scannableIds.join('\n');
-                            status.innerText = `✅ Loaded ${scannableIds.length} scannable IDs`;
+                            // Copy to clipboard
+                            copyToClipboard(textarea);
+                            status.innerText = `✅ Loaded ${scannableIds.length} IDs (copied to clipboard)`;
                             status.style.color = "green";
                         }
                         
@@ -212,18 +214,9 @@
         header.innerHTML = '<b style="display:block; margin-bottom:5px;">Tote Pack And Hold</b>';
         modal.appendChild(header);
 
-        const pasteButton = document.createElement('button');
-        pasteButton.innerText = "Paste";
-        pasteButton.style = "width: 48%; padding: 10px; cursor: pointer; background: #0078d4; color: white; border: none; border-radius: 4px; font-weight: bold;";
-        pasteButton.onclick = () => {
-            const ta = document.getElementById('scannableIdsInput');
-            pasteIntoTextarea(ta);
-        };
-        modal.appendChild(pasteButton);
-
         const containerButton = document.createElement('button');
         containerButton.innerText = "Container";
-        containerButton.style = "width: 48%; padding: 10px; cursor: pointer; background: #9c27b0; color: white; border: none; border-radius: 4px; font-weight: bold; margin-left: 4%;";
+        containerButton.style = "width: 100%; padding: 10px; cursor: pointer; background: #9c27b0; color: white; border: none; border-radius: 4px; font-weight: bold; margin-bottom: 8px;";
         containerButton.onclick = async () => {
             const containerInput = document.getElementById('containerIdInput');
             if (!containerInput.value.trim()) {
@@ -235,7 +228,7 @@
         modal.appendChild(containerButton);
 
         const containerInputLabel = document.createElement('div');
-        containerInputLabel.style = "font-size: 10px; margin-top: 8px; margin-bottom: 2px; font-weight: bold;";
+        containerInputLabel.style = "font-size: 10px; margin-bottom: 2px; font-weight: bold;";
         containerInputLabel.innerText = "Container ID:";
         modal.appendChild(containerInputLabel);
 
