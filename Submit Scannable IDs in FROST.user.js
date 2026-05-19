@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Submit Scannable IDs in FROST
 // @namespace    HOU3
-// @version      1.1.17
+// @version      1.1.18
 // @author       Pedro Sanchez (pefsanch)
 // @description  Read scannable IDs from user input and submit them to a form
 // @match        https://frost-prod-jlb-iad.iad.proxy.amazon.com/packnhold/create
@@ -116,6 +116,80 @@
         }
     }
     
+    // Function to fetch scannable IDs from container hierarchy
+    async function fetchScannableIdsFromContainer(containerId) {
+        const status = document.getElementById('check-status');
+        status.innerText = `Fetching data for container: ${containerId}`;
+        status.style.color = "blue";
+        
+        return new Promise((resolve) => {
+            GM.xmlHttpRequest({
+                method: "POST",
+                url: "https://qi-fcresearch-na.corp.amazon.com/HOU3/results/container-hierarchy",
+                data: `s=${containerId}`,
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded"
+                },
+                onload: function(response) {
+                    try {
+                        const parser = new DOMParser();
+                        const htmlDoc = parser.parseFromString(response.responseText, "text/html");
+                        
+                        // Find the table with child containers
+                        const table = htmlDoc.querySelector('#table-container-hierarchy');
+                        if (!table) {
+                            console.error('Could not find container hierarchy table');
+                            status.innerText = "Error: Table not found";
+                            status.style.color = "red";
+                            resolve([]);
+                            return;
+                        }
+                        
+                        // Extract scannable IDs where quantity > 0
+                        const scannableIds = [];
+                        const rows = table.querySelectorAll('tbody tr');
+                        
+                        rows.forEach(row => {
+                            const cells = row.querySelectorAll('td');
+                            if (cells.length >= 3) {
+                                const scannableId = cells[0].textContent.trim();
+                                const quantity = parseInt(cells[2].textContent.trim(), 10);
+                                
+                                if (quantity > 0) {
+                                    scannableIds.push(scannableId);
+                                    console.log(`Found: ${scannableId} (Qty: ${quantity})`);
+                                }
+                            }
+                        });
+                        
+                        console.log('Extracted scannable IDs:', scannableIds);
+                        
+                        // Fill the textarea with the scannable IDs
+                        const textarea = document.getElementById('scannableIdsInput');
+                        if (textarea) {
+                            textarea.value = scannableIds.join('\n');
+                            status.innerText = `✅ Loaded ${scannableIds.length} scannable IDs`;
+                            status.style.color = "green";
+                        }
+                        
+                        resolve(scannableIds);
+                    } catch (error) {
+                        console.error('Error parsing response:', error);
+                        status.innerText = "Error parsing response";
+                        status.style.color = "red";
+                        resolve([]);
+                    }
+                },
+                onerror: function(error) {
+                    console.error('API request failed:', error);
+                    status.innerText = "Error: API request failed";
+                    status.style.color = "red";
+                    resolve([]);
+                }
+            });
+        });
+    }
+    
     // Create the modal for user input
     function createModal() {
         const modal = document.createElement('div');
@@ -140,12 +214,40 @@
 
         const pasteButton = document.createElement('button');
         pasteButton.innerText = "Paste";
-        pasteButton.style = "width: 100%; padding: 10px; cursor: pointer; background: #0078d4; color: white; border: none; border-radius: 4px; font-weight: bold;";
+        pasteButton.style = "width: 48%; padding: 10px; cursor: pointer; background: #0078d4; color: white; border: none; border-radius: 4px; font-weight: bold;";
         pasteButton.onclick = () => {
             const ta = document.getElementById('scannableIdsInput');
             pasteIntoTextarea(ta);
         };
         modal.appendChild(pasteButton);
+
+        const containerButton = document.createElement('button');
+        containerButton.innerText = "Container";
+        containerButton.style = "width: 48%; padding: 10px; cursor: pointer; background: #9c27b0; color: white; border: none; border-radius: 4px; font-weight: bold; margin-left: 4%;";
+        containerButton.onclick = async () => {
+            const containerInput = document.getElementById('containerIdInput');
+            if (!containerInput.value.trim()) {
+                alert('Please enter a container ID');
+                return;
+            }
+            await fetchScannableIdsFromContainer(containerInput.value.trim());
+        };
+        modal.appendChild(containerButton);
+
+        const containerInputLabel = document.createElement('div');
+        containerInputLabel.style = "font-size: 10px; margin-top: 8px; margin-bottom: 2px; font-weight: bold;";
+        containerInputLabel.innerText = "Container ID:";
+        modal.appendChild(containerInputLabel);
+
+        const containerInput = document.createElement('input');
+        containerInput.id = 'containerIdInput';
+        containerInput.type = 'text';
+        containerInput.placeholder = "e.g., paXPBT2JQYZ";
+        containerInput.style.width = '100%';
+        containerInput.style.padding = '6px';
+        containerInput.style.marginBottom = '8px';
+        containerInput.style.boxSizing = 'border-box';
+        modal.appendChild(containerInput);
 
         const input = document.createElement('textarea');
         input.id = 'scannableIdsInput';
@@ -153,7 +255,7 @@
         input.marginBottom = "20px";
         input.placeholder = "Enter Scannable IDs (one per line):";
         input.style.width = '100%';
-        input.style.height = '150px';
+        input.style.height = '120px';
         modal.appendChild(input);
 
         const spacer = document.createElement("div");
@@ -328,4 +430,3 @@
     createModal();
     $("#scannableIds").focus();
 })();
-
