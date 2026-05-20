@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Tote Bulk Checker
 // @namespace    HOU3
-// @version      1.1.0
+// @version      1.1.1
 // @description  Batch check totes with API calls, display results in table, and export to CSV
 // @author       Pedro Sanchez (pefsanch)
 // @match        https://wd-repair-portal-na.aka.amazon.com/resources/ReCommerceFCWebToolsUI/html/listTote.html
@@ -145,12 +145,11 @@
                 let units = 'N/A';
                 let statusMsg = 'Success';
 
-                // Parse the API response (adjust these fields based on actual API response structure)
-                if (data && data.destination) {
-                    destination = data.destination;
-                }
-                if (data && data.units) {
-                    units = data.units;
+                // Parse from toteReloSummary object
+                if (data && data.toteReloSummary) {
+                    const summary = data.toteReloSummary;
+                    destination = summary.destination || 'N/A';
+                    units = summary.itemCount || 'N/A';
                 }
 
                 checkResults.push({
