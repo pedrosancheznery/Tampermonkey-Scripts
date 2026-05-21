@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Flow Activity Log
 // @namespace    http://tampermonkey.net/
-// @version      1.0.2
+// @version      1.0.3
 // @description  Creates and updates a table with flow scan data.
 // @author       Pedro Sanchez (pefsanch)
 // @match        https://sortcenter-menu-na.amazon.com/containerization/flow
@@ -73,6 +73,33 @@
         }
     };
 
+    // Function to update #sd_input and trigger Enter
+    function updateAndProcessInput(idsList) {
+        const inputField = document.querySelector('#sd_input');
+        if (!inputField) {
+            console.error('#sd_input not found');
+            return;
+        }
+
+        // Set the first ID
+        if (idsList.length > 0) {
+            const firstId = idsList[0];
+            inputField.focus();
+            inputField.value = firstId;
+
+            // Trigger input event
+            inputField.dispatchEvent(new Event('input', { bubbles: true }));
+            
+            // Trigger Enter key
+            inputField.dispatchEvent(new KeyboardEvent('keypress', {
+                key: 'Enter', keyCode: 13, which: 13, bubbles: true
+            }));
+            
+            inputField.dispatchEvent(new Event('blur', { bubbles: true }));
+            inputField.blur();
+        }
+    }
+
     // Create the modal for user input
     function createModal() {
         const modal = document.createElement('div');
@@ -130,6 +157,8 @@
                     const preset = StorageManager.getByName(e.target.value);
                     if (preset) {
                         input.value = preset.ids.join('\n');
+                        // Update #sd_input and trigger Enter
+                        updateAndProcessInput(preset.ids);
                     }
                 }
             };
