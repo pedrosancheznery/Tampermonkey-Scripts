@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Flow Activity Log
 // @namespace    http://tampermonkey.net/
-// @version      1.0.3
+// @version      1.0.4
 // @description  Creates and updates a table with flow scan data.
 // @author       Pedro Sanchez (pefsanch)
 // @match        https://sortcenter-menu-na.amazon.com/containerization/flow
@@ -15,7 +15,7 @@
     'use strict';
 
     // Constants
-    const STORAGE_KEY = 'flowActivityLogPresets';
+    const STORAGE_KEY = 'flowActivityLogDD';
 
     // Create a container for the table if it doesn't exist
     let tableContainer;
@@ -32,72 +32,70 @@
         getAll: () => {
             try {
                 const data = localStorage.getItem(STORAGE_KEY);
-                return data ? JSON.parse(data) : [];
+                return data ? JSON.parse(data) : {};
             } catch (e) {
                 console.error('Error reading from localStorage:', e);
-                return [];
+                return {};
             }
         },
         
-        add: (name, ids) => {
-            const presets = StorageManager.getAll();
-            if (!presets.find(p => p.name === name)) {
-                presets.push({ name, ids: ids.split('\n').filter(id => id.trim()), createdAt: new Date().toISOString() });
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(presets));
+        add: (ddKey, ddValue) => {
+            const dds = StorageManager.getAll();
+            if (!dds[ddKey]) {
+                dds[ddKey] = ddValue;
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(dds));
                 return true;
             }
             return false;
         },
         
-        edit: (oldName, newName, ids) => {
-            const presets = StorageManager.getAll();
-            const index = presets.findIndex(p => p.name === oldName);
-            if (index !== -1) {
-                presets[index] = { name: newName, ids: ids.split('\n').filter(id => id.trim()), createdAt: presets[index].createdAt, updatedAt: new Date().toISOString() };
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(presets));
+        edit: (ddKey, newValue) => {
+            const dds = StorageManager.getAll();
+            if (dds[ddKey]) {
+                dds[ddKey] = newValue;
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(dds));
                 return true;
             }
             return false;
         },
         
-        delete: (name) => {
-            const presets = StorageManager.getAll();
-            const filtered = presets.filter(p => p.name !== name);
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
-            return presets.length !== filtered.length;
+        delete: (ddKey) => {
+            const dds = StorageManager.getAll();
+            if (dds[ddKey]) {
+                delete dds[ddKey];
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(dds));
+                return true;
+            }
+            return false;
         },
         
-        getByName: (name) => {
-            const presets = StorageManager.getAll();
-            return presets.find(p => p.name === name);
+        getByKey: (ddKey) => {
+            const dds = StorageManager.getAll();
+            return dds[ddKey] || null;
         }
     };
 
     // Function to update #sd_input and trigger Enter
-    function updateAndProcessInput(idsList) {
+    function updateAndProcessInput(ddValue) {
         const inputField = document.querySelector('#sd_input');
         if (!inputField) {
             console.error('#sd_input not found');
             return;
         }
 
-        // Set the first ID
-        if (idsList.length > 0) {
-            const firstId = idsList[0];
-            inputField.focus();
-            inputField.value = firstId;
+        inputField.focus();
+        inputField.value = ddValue;
 
-            // Trigger input event
-            inputField.dispatchEvent(new Event('input', { bubbles: true }));
-            
-            // Trigger Enter key
-            inputField.dispatchEvent(new KeyboardEvent('keypress', {
-                key: 'Enter', keyCode: 13, which: 13, bubbles: true
-            }));
-            
-            inputField.dispatchEvent(new Event('blur', { bubbles: true }));
-            inputField.blur();
-        }
+        // Trigger input event
+        inputField.dispatchEvent(new Event('input', { bubbles: true }));
+        
+        // Trigger Enter key
+        inputField.dispatchEvent(new KeyboardEvent('keypress', {
+            key: 'Enter', keyCode: 13, which: 13, bubbles: true
+        }));
+        
+        inputField.dispatchEvent(new Event('blur', { bubbles: true }));
+        inputField.blur();
     }
 
     // Create the modal for user input
@@ -115,126 +113,140 @@
         modal.style.width = '300px';
         modal.style.zIndex = '9999';
 
-        // Check if #parentInfo is hidden
-        const parentInfo = document.getElementById('parentInfo');
-        const parentInfoHidden = !parentInfo || parentInfo.offsetParent === null;
-
-        if (parentInfoHidden) {
-            // Show select dropdown from localStorage
-            const selectContainer = document.createElement('div');
-            selectContainer.style.marginBottom = '15px';
-
-            const label = document.createElement('label');
-            label.innerText = "Load Preset: ";
-            label.style.display = 'block';
-            label.style.marginBottom = '5px';
-            label.style.fontWeight = 'bold';
-            selectContainer.appendChild(label);
-
-            const select = document.createElement('select');
-            select.id = 'presetSelect';
-            select.style.width = '100%';
-            select.style.padding = '8px';
-            select.style.marginBottom = '5px';
-            select.style.borderRadius = '4px';
-            select.style.border = '1px solid #ccc';
-
-            const defaultOption = document.createElement('option');
-            defaultOption.value = '';
-            defaultOption.innerText = '-- Select a preset --';
-            select.appendChild(defaultOption);
-
-            const presets = StorageManager.getAll();
-            presets.forEach(preset => {
-                const option = document.createElement('option');
-                option.value = preset.name;
-                option.innerText = `${preset.name} (${preset.ids.length} IDs)`;
-                select.appendChild(option);
-            });
-
-            select.onchange = (e) => {
-                if (e.target.value) {
-                    const preset = StorageManager.getByName(e.target.value);
-                    if (preset) {
-                        input.value = preset.ids.join('\n');
-                        // Update #sd_input and trigger Enter
-                        updateAndProcessInput(preset.ids);
-                    }
-                }
-            };
-
-            selectContainer.appendChild(select);
-            modal.appendChild(selectContainer);
-
-            // Preset Management Buttons
-            const presetBtnsContainer = document.createElement('div');
-            presetBtnsContainer.style.marginBottom = '10px';
-            presetBtnsContainer.style.display = 'grid';
-            presetBtnsContainer.style.gridTemplateColumns = '1fr 1fr';
-            presetBtnsContainer.style.gap = '5px';
-
-            const savePresetBtn = document.createElement('button');
-            savePresetBtn.innerText = "💾 Save";
-            savePresetBtn.style = "padding: 6px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; font-size: 12px;";
-            savePresetBtn.onclick = () => {
-                const presetName = prompt("Enter preset name:");
-                if (presetName && input.value) {
-                    if (StorageManager.add(presetName, input.value)) {
-                        alert(`Preset "${presetName}" saved!`);
-                        location.reload(); // Reload to update select options
-                    } else {
-                        alert(`Preset "${presetName}" already exists!`);
-                    }
-                }
-            };
-            presetBtnsContainer.appendChild(savePresetBtn);
-
-            const editPresetBtn = document.createElement('button');
-            editPresetBtn.innerText = "✏️ Edit";
-            editPresetBtn.style = "padding: 6px; cursor: pointer; background: #ffc107; color: black; border: none; border-radius: 4px; font-size: 12px;";
-            editPresetBtn.onclick = () => {
-                const selectedName = select.value;
-                if (!selectedName) {
-                    alert("Select a preset first!");
-                    return;
-                }
-                const newName = prompt("Enter new preset name:", selectedName);
-                if (newName && input.value) {
-                    if (StorageManager.edit(selectedName, newName, input.value)) {
-                        alert(`Preset updated to "${newName}"!`);
-                        location.reload();
-                    }
-                }
-            };
-            presetBtnsContainer.appendChild(editPresetBtn);
-
-            const deletePresetBtn = document.createElement('button');
-            deletePresetBtn.innerText = "🗑️ Delete";
-            deletePresetBtn.style = "padding: 6px; cursor: pointer; background: #dc3545; color: white; border: none; border-radius: 4px; font-size: 12px; grid-column: 1 / -1;";
-            deletePresetBtn.onclick = () => {
-                const selectedName = select.value;
-                if (!selectedName) {
-                    alert("Select a preset first!");
-                    return;
-                }
-                if (confirm(`Delete preset "${selectedName}"?`)) {
-                    if (StorageManager.delete(selectedName)) {
-                        alert(`Preset "${selectedName}" deleted!`);
-                        location.reload();
-                    }
-                }
-            };
-            presetBtnsContainer.appendChild(deletePresetBtn);
-
-            modal.appendChild(presetBtnsContainer);
-        }
+        // Show select dropdown from localStorage
+        const selectContainer = document.createElement('div');
+        selectContainer.style.marginBottom = '15px';
 
         const label = document.createElement('label');
-        label.innerText = "Enter Container IDs (one per line):";
+        label.innerText = "Load DD: ";
         label.style.display = 'block';
         label.style.marginBottom = '5px';
         label.style.fontWeight = 'bold';
-        modal.appendChild(label);
+        selectContainer.appendChild(label);
+
+        const select = document.createElement('select');
+        select.id = 'ddSelect';
+        select.style.width = '100%';
+        select.style.padding = '8px';
+        select.style.marginBottom = '5px';
+        select.style.borderRadius = '4px';
+        select.style.border = '1px solid #ccc';
+
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.innerText = '-- Select a DD --';
+        select.appendChild(defaultOption);
+
+        const dds = StorageManager.getAll();
+        Object.entries(dds).forEach(([key, value]) => {
+            const option = document.createElement('option');
+            option.value = key;
+            option.innerText = key;
+            select.appendChild(option);
+        });
+
+        select.onchange = (e) => {
+            if (e.target.value) {
+                const ddValue = StorageManager.getByKey(e.target.value);
+                if (ddValue) {
+                    ddValueInput.value = ddValue;
+                    // Update #sd_input and trigger Enter
+                    updateAndProcessInput(ddValue);
+                }
+            }
+        };
+
+        selectContainer.appendChild(select);
+        modal.appendChild(selectContainer);
+
+        // DD Management Buttons
+        const ddBtnsContainer = document.createElement('div');
+        ddBtnsContainer.style.marginBottom = '10px';
+        ddBtnsContainer.style.display = 'grid';
+        ddBtnsContainer.style.gridTemplateColumns = '1fr 1fr';
+        ddBtnsContainer.style.gap = '5px';
+
+        const saveDDBtn = document.createElement('button');
+        saveDDBtn.innerText = "💾 Save";
+        saveDDBtn.style = "padding: 6px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; font-size: 12px;";
+        saveDDBtn.onclick = () => {
+            const ddKey = prompt("Enter DD name (e.g., DD177):");
+            const ddValue = ddValueInput.value.trim();
+            if (ddKey && ddValue) {
+                if (StorageManager.add(ddKey, ddValue)) {
+                    alert(`DD "${ddKey}" saved!`);
+                    location.reload(); // Reload to update select options
+                } else {
+                    alert(`DD "${ddKey}" already exists!`);
+                }
+            }
+        };
+        ddBtnsContainer.appendChild(saveDDBtn);
+
+        const editDDBtn = document.createElement('button');
+        editDDBtn.innerText = "✏️ Edit";
+        editDDBtn.style = "padding: 6px; cursor: pointer; background: #ffc107; color: black; border: none; border-radius: 4px; font-size: 12px;";
+        editDDBtn.onclick = () => {
+            const selectedKey = select.value;
+            if (!selectedKey) {
+                alert("Select a DD first!");
+                return;
+            }
+            const newValue = prompt("Enter new value:", ddValueInput.value);
+            if (newValue) {
+                if (StorageManager.edit(selectedKey, newValue)) {
+                    alert(`DD "${selectedKey}" updated!`);
+                    location.reload();
+                }
+            }
+        };
+        ddBtnsContainer.appendChild(editDDBtn);
+
+        const deleteDDBtn = document.createElement('button');
+        deleteDDBtn.innerText = "🗑️ Delete";
+        deleteDDBtn.style = "padding: 6px; cursor: pointer; background: #dc3545; color: white; border: none; border-radius: 4px; font-size: 12px; grid-column: 1 / -1;";
+        deleteDDBtn.onclick = () => {
+            const selectedKey = select.value;
+            if (!selectedKey) {
+                alert("Select a DD first!");
+                return;
+            }
+            if (confirm(`Delete DD "${selectedKey}"?`)) {
+                if (StorageManager.delete(selectedKey)) {
+                    alert(`DD "${selectedKey}" deleted!`);
+                    location.reload();
+                }
+            }
+        };
+        ddBtnsContainer.appendChild(deleteDDBtn);
+
+        modal.appendChild(ddBtnsContainer);
+
+        // DD Value Input
+        const ddValueLabel = document.createElement('label');
+        ddValueLabel.innerText = "DD Value:";
+        ddValueLabel.style.display = 'block';
+        ddValueLabel.style.marginBottom = '5px';
+        ddValueLabel.style.fontWeight = 'bold';
+        modal.appendChild(ddValueLabel);
+
+        const ddValueInput = document.createElement('input');
+        ddValueInput.id = 'ddValueInput';
+        ddValueInput.type = 'text';
+        ddValueInput.style.width = '100%';
+        ddValueInput.style.padding = '8px';
+        ddValueInput.style.marginBottom = '15px';
+        ddValueInput.style.borderRadius = '4px';
+        ddValueInput.style.border = '1px solid #ccc';
+        ddValueInput.placeHolder = "e.g., 56b0c595-68e1-0eee-24de-8d21512d7db0";
+        modal.appendChild(ddValueInput);
+
+        const label2 = document.createElement('label');
+        label2.innerText = "Enter Container IDs (one per line):";
+        label2.style.display = 'block';
+        label2.style.marginBottom = '5px';
+        label2.style.fontWeight = 'bold';
+        modal.appendChild(label2);
 
         const input = document.createElement('textarea');
         input.id = 'scannableIdsInput';
