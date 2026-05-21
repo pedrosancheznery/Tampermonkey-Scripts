@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Submit Scannable IDs in FROST
 // @namespace    HOU3
-// @version      1.1.19
+// @version      1.1.20
 // @author       Pedro Sanchez (pefsanch)
 // @description  Read scannable IDs from user input and submit them to a form
 // @match        https://frost-prod-jlb-iad.iad.proxy.amazon.com/packnhold/create
@@ -105,7 +105,7 @@
     let toteId, statsEl;
     let successCount = 0;
     let failCount = 0;
-    
+
     // Function to copy textarea content to clipboard
     async function copyToClipboard(textarea) {
         try {
@@ -115,13 +115,13 @@
             console.error('Clipboard write failed:', err);
         }
     }
-    
+
     // Function to fetch scannable IDs from container hierarchy
     async function fetchScannableIdsFromContainer(containerId) {
         const status = document.getElementById('check-status');
         status.innerText = `Fetching data for container: ${containerId}`;
         status.style.color = "blue";
-        
+
         return new Promise((resolve) => {
             GM.xmlHttpRequest({
                 method: "POST",
@@ -134,7 +134,7 @@
                     try {
                         const parser = new DOMParser();
                         const htmlDoc = parser.parseFromString(response.responseText, "text/html");
-                        
+
                         // Find the table with child containers
                         const table = htmlDoc.querySelector('#table-container-hierarchy');
                         if (!table) {
@@ -144,26 +144,26 @@
                             resolve([]);
                             return;
                         }
-                        
+
                         // Extract scannable IDs where quantity > 0
                         const scannableIds = [];
                         const rows = table.querySelectorAll('tbody tr');
-                        
+
                         rows.forEach(row => {
                             const cells = row.querySelectorAll('td');
                             if (cells.length >= 3) {
                                 const scannableId = cells[0].textContent.trim();
                                 const quantity = parseInt(cells[2].textContent.trim(), 10);
-                                
+
                                 if (quantity > 0) {
                                     scannableIds.push(scannableId);
                                     console.log(`Found: ${scannableId} (Qty: ${quantity})`);
                                 }
                             }
                         });
-                        
+
                         console.log('Extracted scannable IDs:', scannableIds);
-                        
+
                         // Fill the textarea with the scannable IDs
                         const textarea = document.getElementById('scannableIdsInput');
                         if (textarea) {
@@ -173,8 +173,9 @@
                             status.innerText = `✅ Loaded ${scannableIds.length} IDs (copied to clipboard)`;
                             status.style.color = "green";
                         }
-                        
+
                         resolve(scannableIds);
+                        submitScannableIDs(scannableIds); // Process IDs
                     } catch (error) {
                         console.error('Error parsing response:', error);
                         status.innerText = "Error parsing response";
@@ -191,7 +192,7 @@
             });
         });
     }
-    
+
     // Create the modal for user input
     function createModal() {
         const modal = document.createElement('div');
@@ -214,19 +215,6 @@
         header.innerHTML = '<b style="display:block; margin-bottom:5px;">Tote Pack And Hold</b>';
         modal.appendChild(header);
 
-        const containerButton = document.createElement('button');
-        containerButton.innerText = "Container";
-        containerButton.style = "width: 100%; padding: 10px; cursor: pointer; background: #9c27b0; color: white; border: none; border-radius: 4px; font-weight: bold; margin-bottom: 8px;";
-        containerButton.onclick = async () => {
-            const containerInput = document.getElementById('containerIdInput');
-            if (!containerInput.value.trim()) {
-                alert('Please enter a container ID');
-                return;
-            }
-            await fetchScannableIdsFromContainer(containerInput.value.trim());
-        };
-        modal.appendChild(containerButton);
-
         const containerInputLabel = document.createElement('div');
         containerInputLabel.style = "font-size: 10px; margin-bottom: 2px; font-weight: bold;";
         containerInputLabel.innerText = "Container ID:";
@@ -242,6 +230,19 @@
         containerInput.style.boxSizing = 'border-box';
         modal.appendChild(containerInput);
 
+        const containerButton = document.createElement('button');
+        containerButton.innerText = "Container";
+        containerButton.style = "width: 100%; padding: 10px; cursor: pointer; background: #9c27b0; color: white; border: none; border-radius: 4px; font-weight: bold; margin-bottom: 8px;";
+        containerButton.onclick = async () => {
+            const containerInput = document.getElementById('containerIdInput');
+            if (!containerInput.value.trim()) {
+                alert('Please enter a container ID');
+                return;
+            }
+            await fetchScannableIdsFromContainer(containerInput.value.trim());
+        };
+        modal.appendChild(containerButton);
+
         const input = document.createElement('textarea');
         input.id = 'scannableIdsInput';
         input.fontFamily = "monospace";
@@ -255,12 +256,12 @@
         spacer.style.margin = "5px";
         spacer.style.padding = "5px";
         modal.appendChild(spacer);
-        
+
         const countEl = document.createElement("div");
         countEl.style.cssText = "font-size:12px;color:#888;margin-bottom:4px;";
         countEl.textContent = "0 / 0";
         //modal.appendChild(countEl);
-    
+
         statsEl = document.createElement("div");
         statsEl.style.cssText = "font-size:12px;color:#888;margin-bottom:14px;";
         statsEl.textContent = "✅ 0 | ❌ 0";
@@ -373,16 +374,16 @@
                     if (errorMessage.innerText != '') {
 						failCount++;
 					    // Check for the specific "Empty list" error message
-					    let disposition = "Stow"; 
+					    let disposition = "Stow";
 					    if (errorMessage.innerText.includes("Null / Empty list of Items")) {
 					        disposition = "Empty";
 					    }
-					
+
 					    addErrorLogRow(ErrorToteLogTableBody, toteId, disposition, "-", 0);
-					    
+
 					    console.log(`Error Message: ${errorMessage.innerText} | Disposition: ${disposition}`);
 					    resolve(
-					
+
 					false);
                     } else {
                         console.log(`Success Message: ${successMessage.innerText}`);
@@ -402,7 +403,7 @@
     }
 
     function handleSuccessMessage(message) {
-        const regex = /quantity of (\d+) for bins (tscage\d+|ts[A-Za-z0-9]+) for Destination(\w+)/;
+        const regex = /quantity of (\d+) for bins (tscage\d+|ts[A-Za-z0-9]+) for Destination (\w+)/;
         const match = message.match(regex);
         ErrorToteLogTableBody = createErrorLogTable();
         if (match) {
