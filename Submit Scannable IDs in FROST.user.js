@@ -239,6 +239,7 @@
                 alert('Please enter a container ID');
                 return;
             }
+            clearContents();
             await fetchScannableIdsFromContainer(containerInput.value.trim());
         };
         modal.appendChild(containerButton);
@@ -284,13 +285,7 @@
         clearButton.style = "width: 30%; padding: 8px; cursor: pointer; background: #cc0000; color: white; border: none; border-radius: 4px; font-weight: bold; margin-left: 10px";
         clearButton.innerText = "Clear";
         clearButton.onclick = () => {
-            document.getElementById("scannableIdsInput").value = "";
-            document.getElementById("tote-error-log-table-body").innerHTML = "";
-			successCount = 0 ;
-			failCount = 0;
-			updateStats();
-			const logContainer = document.getElementById('tote-log-container');
-			logContainer.style.display = 'none';
+            clearContents();
         }; // Clear contents
         modal.appendChild(clearButton);
 
@@ -304,6 +299,17 @@
         document.body.appendChild(modal);
         console.log("Submit Scannable IDs in FROST Script Started")
         return modal;
+    }
+
+    function clearContents() {
+        document.getElementById("scannableIdsInput").value = "";
+        document.getElementById("tote-error-log-table-body").innerHTML = "";
+        successCount = 0 ;
+        failCount = 0;
+        updateStats();
+        const logContainer = document.getElementById('tote-log-container');
+        logContainer.style.display = 'none';
+        return true;
     }
 
     function updateStats() {
