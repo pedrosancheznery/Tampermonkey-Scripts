@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Flow Activity Log
 // @namespace    http://tampermonkey.net/
-// @version      1.0.5
+// @version      1.0.6
 // @description  Creates and updates a table with flow scan data.
 // @author       Pedro Sanchez (pefsanch)
 // @match        https://sortcenter-menu-na.amazon.com/containerization/flow
@@ -28,6 +28,7 @@
     let successCount = 0;
     let failCount = 0;
     let previousProcessedCount = 0;
+    let adminSectionVisible = false;
 
     // LocalStorage Management Functions using Tampermonkey GM functions
     const StorageManager = {
@@ -120,7 +121,7 @@
         modal.style.maxHeight = '90vh';
         modal.style.overflowY = 'auto';
 
-        // Show select dropdown from localStorage
+        // ===== ALWAYS VISIBLE: Select dropdown =====
         const selectContainer = document.createElement('div');
         selectContainer.style.marginBottom = '15px';
 
@@ -152,6 +153,7 @@
             select.appendChild(option);
         });
 
+        let ddValueInput; // Declare here so it's accessible
         select.onchange = (e) => {
             if (e.target.value) {
                 const ddValue = StorageManager.getByKey(e.target.value);
@@ -168,13 +170,20 @@
         selectContainer.appendChild(select);
         modal.appendChild(selectContainer);
 
+        // ===== ADMIN SECTION (Hidden by default) =====
+        const adminSection = document.createElement('div');
+        adminSection.id = 'ddAdminSection';
+        adminSection.style.display = 'none';
+        adminSection.style.borderTop = '1px solid #ddd';
+        adminSection.style.paddingTop = '10px';
+
         // DD Key Input
         const ddKeyLabel = document.createElement('label');
         ddKeyLabel.innerText = "DD Key:";
         ddKeyLabel.style.display = 'block';
         ddKeyLabel.style.marginBottom = '5px';
         ddKeyLabel.style.fontWeight = 'bold';
-        modal.appendChild(ddKeyLabel);
+        adminSection.appendChild(ddKeyLabel);
 
         const ddKeyInput = document.createElement('input');
         ddKeyInput.id = 'ddKeyInput';
@@ -185,7 +194,7 @@
         ddKeyInput.style.borderRadius = '4px';
         ddKeyInput.style.border = '1px solid #ccc';
         ddKeyInput.placeHolder = "e.g., DD177";
-        modal.appendChild(ddKeyInput);
+        adminSection.appendChild(ddKeyInput);
 
         // DD Value Input
         const ddValueLabel = document.createElement('label');
@@ -193,9 +202,9 @@
         ddValueLabel.style.display = 'block';
         ddValueLabel.style.marginBottom = '5px';
         ddValueLabel.style.fontWeight = 'bold';
-        modal.appendChild(ddValueLabel);
+        adminSection.appendChild(ddValueLabel);
 
-        const ddValueInput = document.createElement('input');
+        ddValueInput = document.createElement('input');
         ddValueInput.id = 'ddValueInput';
         ddValueInput.type = 'text';
         ddValueInput.style.width = '100%';
@@ -204,7 +213,7 @@
         ddValueInput.style.borderRadius = '4px';
         ddValueInput.style.border = '1px solid #ccc';
         ddValueInput.placeHolder = "e.g., 56b0c595-68e1-0eee-24de-8d21512d7db0";
-        modal.appendChild(ddValueInput);
+        adminSection.appendChild(ddValueInput);
 
         // DD Management Buttons
         const ddBtnsContainer = document.createElement('div');
@@ -275,8 +284,39 @@
         };
         ddBtnsContainer.appendChild(deleteDDBtn);
 
-        modal.appendChild(ddBtnsContainer);
+        adminSection.appendChild(ddBtnsContainer);
+        modal.appendChild(adminSection);
 
+        // ===== ADMIN TOGGLE BUTTONS =====
+        const adminToggleContainer = document.createElement('div');
+        adminToggleContainer.style.marginBottom = '15px';
+        adminToggleContainer.style.display = 'grid';
+        adminToggleContainer.style.gridTemplateColumns = '1fr 1fr';
+        adminToggleContainer.style.gap = '5px';
+
+        const adminShowBtn = document.createElement('button');
+        adminShowBtn.innerText = "⚙️ DD Admin";
+        adminShowBtn.style = "padding: 8px; cursor: pointer; background: #6c757d; color: white; border: none; border-radius: 4px; font-size: 12px; font-weight: bold;";
+        adminShowBtn.onclick = () => {
+            adminSectionVisible = !adminSectionVisible;
+            adminSection.style.display = adminSectionVisible ? 'block' : 'none';
+            adminShowBtn.style.background = adminSectionVisible ? '#495057' : '#6c757d';
+        };
+        adminToggleContainer.appendChild(adminShowBtn);
+
+        const adminHideBtn = document.createElement('button');
+        adminHideBtn.innerText = "✕ Close";
+        adminHideBtn.style = "padding: 8px; cursor: pointer; background: #6c757d; color: white; border: none; border-radius: 4px; font-size: 12px; font-weight: bold;";
+        adminHideBtn.onclick = () => {
+            adminSectionVisible = false;
+            adminSection.style.display = 'none';
+            adminShowBtn.style.background = '#6c757d';
+        };
+        adminToggleContainer.appendChild(adminHideBtn);
+
+        modal.appendChild(adminToggleContainer);
+
+        // ===== REST OF THE MODAL =====
         const label2 = document.createElement('label');
         label2.innerText = "Enter Container IDs (one per line):";
         label2.style.display = 'block';
