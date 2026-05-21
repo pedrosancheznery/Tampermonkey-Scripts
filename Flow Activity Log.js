@@ -1,10 +1,12 @@
 // ==UserScript==
 // @name         Flow Activity Log
 // @namespace    http://tampermonkey.net/
-// @version      1.0.4
+// @version      1.0.5
 // @description  Creates and updates a table with flow scan data.
 // @author       Pedro Sanchez (pefsanch)
 // @match        https://sortcenter-menu-na.amazon.com/containerization/flow
+// @grant        GM_setValue
+// @grant        GM_getValue
 // @grant        GM_addStyle
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=amazon.com
 // @downloadURL  https://raw.githubusercontent.com/pedrosancheznery/Tampermonkey-Scripts/main/Flow%20Activity%20Log.js
@@ -27,14 +29,14 @@
     let failCount = 0;
     let previousProcessedCount = 0;
 
-    // LocalStorage Management Functions
+    // LocalStorage Management Functions using Tampermonkey GM functions
     const StorageManager = {
         getAll: () => {
             try {
-                const data = localStorage.getItem(STORAGE_KEY);
-                return data ? JSON.parse(data) : {};
+                const data = GM_getValue(STORAGE_KEY, '{}');
+                return typeof data === 'string' ? JSON.parse(data) : data;
             } catch (e) {
-                console.error('Error reading from localStorage:', e);
+                console.error('Error reading from storage:', e);
                 return {};
             }
         },
@@ -43,7 +45,8 @@
             const dds = StorageManager.getAll();
             if (!dds[ddKey]) {
                 dds[ddKey] = ddValue;
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(dds));
+                GM_setValue(STORAGE_KEY, JSON.stringify(dds));
+                console.log('Saved DD:', ddKey, '=', ddValue);
                 return true;
             }
             return false;
@@ -53,7 +56,8 @@
             const dds = StorageManager.getAll();
             if (dds[ddKey]) {
                 dds[ddKey] = newValue;
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(dds));
+                GM_setValue(STORAGE_KEY, JSON.stringify(dds));
+                console.log('Updated DD:', ddKey, '=', newValue);
                 return true;
             }
             return false;
@@ -63,7 +67,8 @@
             const dds = StorageManager.getAll();
             if (dds[ddKey]) {
                 delete dds[ddKey];
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(dds));
+                GM_setValue(STORAGE_KEY, JSON.stringify(dds));
+                console.log('Deleted DD:', ddKey);
                 return true;
             }
             return false;
@@ -112,6 +117,8 @@
         modal.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
         modal.style.width = '300px';
         modal.style.zIndex = '9999';
+        modal.style.maxHeight = '90vh';
+        modal.style.overflowY = 'auto';
 
         // Show select dropdown from localStorage
         const selectContainer = document.createElement('div');
@@ -153,74 +160,32 @@
                     // Update #sd_input and trigger Enter
                     updateAndProcessInput(ddValue);
                 }
+            } else {
+                ddValueInput.value = '';
             }
         };
 
         selectContainer.appendChild(select);
         modal.appendChild(selectContainer);
 
-        // DD Management Buttons
-        const ddBtnsContainer = document.createElement('div');
-        ddBtnsContainer.style.marginBottom = '10px';
-        ddBtnsContainer.style.display = 'grid';
-        ddBtnsContainer.style.gridTemplateColumns = '1fr 1fr';
-        ddBtnsContainer.style.gap = '5px';
+        // DD Key Input
+        const ddKeyLabel = document.createElement('label');
+        ddKeyLabel.innerText = "DD Key:";
+        ddKeyLabel.style.display = 'block';
+        ddKeyLabel.style.marginBottom = '5px';
+        ddKeyLabel.style.fontWeight = 'bold';
+        modal.appendChild(ddKeyLabel);
 
-        const saveDDBtn = document.createElement('button');
-        saveDDBtn.innerText = "💾 Save";
-        saveDDBtn.style = "padding: 6px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; font-size: 12px;";
-        saveDDBtn.onclick = () => {
-            const ddKey = prompt("Enter DD name (e.g., DD177):");
-            const ddValue = ddValueInput.value.trim();
-            if (ddKey && ddValue) {
-                if (StorageManager.add(ddKey, ddValue)) {
-                    alert(`DD "${ddKey}" saved!`);
-                    location.reload(); // Reload to update select options
-                } else {
-                    alert(`DD "${ddKey}" already exists!`);
-                }
-            }
-        };
-        ddBtnsContainer.appendChild(saveDDBtn);
-
-        const editDDBtn = document.createElement('button');
-        editDDBtn.innerText = "✏️ Edit";
-        editDDBtn.style = "padding: 6px; cursor: pointer; background: #ffc107; color: black; border: none; border-radius: 4px; font-size: 12px;";
-        editDDBtn.onclick = () => {
-            const selectedKey = select.value;
-            if (!selectedKey) {
-                alert("Select a DD first!");
-                return;
-            }
-            const newValue = prompt("Enter new value:", ddValueInput.value);
-            if (newValue) {
-                if (StorageManager.edit(selectedKey, newValue)) {
-                    alert(`DD "${selectedKey}" updated!`);
-                    location.reload();
-                }
-            }
-        };
-        ddBtnsContainer.appendChild(editDDBtn);
-
-        const deleteDDBtn = document.createElement('button');
-        deleteDDBtn.innerText = "🗑️ Delete";
-        deleteDDBtn.style = "padding: 6px; cursor: pointer; background: #dc3545; color: white; border: none; border-radius: 4px; font-size: 12px; grid-column: 1 / -1;";
-        deleteDDBtn.onclick = () => {
-            const selectedKey = select.value;
-            if (!selectedKey) {
-                alert("Select a DD first!");
-                return;
-            }
-            if (confirm(`Delete DD "${selectedKey}"?`)) {
-                if (StorageManager.delete(selectedKey)) {
-                    alert(`DD "${selectedKey}" deleted!`);
-                    location.reload();
-                }
-            }
-        };
-        ddBtnsContainer.appendChild(deleteDDBtn);
-
-        modal.appendChild(ddBtnsContainer);
+        const ddKeyInput = document.createElement('input');
+        ddKeyInput.id = 'ddKeyInput';
+        ddKeyInput.type = 'text';
+        ddKeyInput.style.width = '100%';
+        ddKeyInput.style.padding = '8px';
+        ddKeyInput.style.marginBottom = '10px';
+        ddKeyInput.style.borderRadius = '4px';
+        ddKeyInput.style.border = '1px solid #ccc';
+        ddKeyInput.placeHolder = "e.g., DD177";
+        modal.appendChild(ddKeyInput);
 
         // DD Value Input
         const ddValueLabel = document.createElement('label');
@@ -235,17 +200,89 @@
         ddValueInput.type = 'text';
         ddValueInput.style.width = '100%';
         ddValueInput.style.padding = '8px';
-        ddValueInput.style.marginBottom = '15px';
+        ddValueInput.style.marginBottom = '10px';
         ddValueInput.style.borderRadius = '4px';
         ddValueInput.style.border = '1px solid #ccc';
         ddValueInput.placeHolder = "e.g., 56b0c595-68e1-0eee-24de-8d21512d7db0";
         modal.appendChild(ddValueInput);
+
+        // DD Management Buttons
+        const ddBtnsContainer = document.createElement('div');
+        ddBtnsContainer.style.marginBottom = '10px';
+        ddBtnsContainer.style.display = 'grid';
+        ddBtnsContainer.style.gridTemplateColumns = '1fr 1fr';
+        ddBtnsContainer.style.gap = '5px';
+
+        const saveDDBtn = document.createElement('button');
+        saveDDBtn.innerText = "💾 Save";
+        saveDDBtn.style = "padding: 8px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; font-size: 12px; font-weight: bold;";
+        saveDDBtn.onclick = () => {
+            const ddKey = ddKeyInput.value.trim();
+            const ddValue = ddValueInput.value.trim();
+            if (ddKey && ddValue) {
+                if (StorageManager.add(ddKey, ddValue)) {
+                    alert(`DD "${ddKey}" saved!`);
+                    ddKeyInput.value = '';
+                    ddValueInput.value = '';
+                    location.reload();
+                } else {
+                    alert(`DD "${ddKey}" already exists!`);
+                }
+            } else {
+                alert('Both DD Key and Value are required!');
+            }
+        };
+        ddBtnsContainer.appendChild(saveDDBtn);
+
+        const editDDBtn = document.createElement('button');
+        editDDBtn.innerText = "✏️ Edit";
+        editDDBtn.style = "padding: 8px; cursor: pointer; background: #ffc107; color: black; border: none; border-radius: 4px; font-size: 12px; font-weight: bold;";
+        editDDBtn.onclick = () => {
+            const selectedKey = select.value;
+            if (!selectedKey) {
+                alert("Select a DD first!");
+                return;
+            }
+            const newValue = ddValueInput.value.trim();
+            if (newValue) {
+                if (StorageManager.edit(selectedKey, newValue)) {
+                    alert(`DD "${selectedKey}" updated!`);
+                    location.reload();
+                }
+            } else {
+                alert('DD Value is required!');
+            }
+        };
+        ddBtnsContainer.appendChild(editDDBtn);
+
+        const deleteDDBtn = document.createElement('button');
+        deleteDDBtn.innerText = "🗑️ Delete";
+        deleteDDBtn.style = "padding: 8px; cursor: pointer; background: #dc3545; color: white; border: none; border-radius: 4px; font-size: 12px; font-weight: bold; grid-column: 1 / -1;";
+        deleteDDBtn.onclick = () => {
+            const selectedKey = select.value;
+            if (!selectedKey) {
+                alert("Select a DD first!");
+                return;
+            }
+            if (confirm(`Delete DD "${selectedKey}"?`)) {
+                if (StorageManager.delete(selectedKey)) {
+                    alert(`DD "${selectedKey}" deleted!`);
+                    ddKeyInput.value = '';
+                    ddValueInput.value = '';
+                    location.reload();
+                }
+            }
+        };
+        ddBtnsContainer.appendChild(deleteDDBtn);
+
+        modal.appendChild(ddBtnsContainer);
 
         const label2 = document.createElement('label');
         label2.innerText = "Enter Container IDs (one per line):";
         label2.style.display = 'block';
         label2.style.marginBottom = '5px';
         label2.style.fontWeight = 'bold';
+        label2.style.marginTop = '15px';
         modal.appendChild(label2);
 
         const input = document.createElement('textarea');
