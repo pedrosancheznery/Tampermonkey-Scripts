@@ -25,7 +25,7 @@
         // Container
         const container = document.createElement('div');
         container.id = 'tm-pnp-automation';
-        container.style = "position: fixed; bottom: 50px; left: 10px; z-index: 9999; background: white; border: 2px solid #232f3e; padding: 10px; border-radius: 4px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 300px; font-family: Arial, sans-serif; font-size: 13px;";
+        container.style = "position: fixed; bottom: 50px; left: 10px; z-index: 9999; background: white; border: 2px solid #232f3e; padding: 10px; border-radius: 4px; box-shadow: 0 4px 6px rgba(0,0,0,0[...]
 
         // IDs textarea
         const label1 = document.createElement('label');
@@ -79,7 +79,7 @@
         // Unprocessed Totes heading + table
         const unprocessedDiv = document.createElement('div');
         unprocessedDiv.id = "unprocessed-div";
-        unprocessedDiv.style = "background:white;border:2px solid rgb(35, 47, 62);border-radius:4px;box-shadow:rgba(0, 0, 0, 0.1) 0px 4px 6px;font-family:Arial, sans-serif;font-size:13px;height:465px;position:fixed;bottom:50px;left:310px;margin-top:10px;overflow-y:auto;font-weight:bold;width:300px;display:none;";
+        unprocessedDiv.style = "background:white;border:2px solid rgb(35, 47, 62);border-radius:4px;box-shadow:rgba(0, 0, 0, 0.1) 0px 4px 6px;font-family:Arial, sans-serif;font-size:13px;height:46[...]
         const unprocessedHeading = document.createElement('div');
         unprocessedHeading.id = "unprocessed-heading";
         unprocessedHeading.innerText = "Unprocessed Totes";
@@ -90,7 +90,7 @@
         const unprocessedTable = document.createElement('table');
         unprocessedTable.id = "unprocessed-totes-table";
         unprocessedTable.style = "width:100%;border-collapse:collapse;margin-top:6px;font-size:12px;border:1px solid #ddd;";
-        unprocessedTable.innerHTML = '<thead><tr><th style="border:1px solid #ddd;padding:4px;text-align:left">Tote</th><th style="border:1px solid #ddd;padding:4px;text-align:left">Reason</th></tr></thead><tbody></tbody>';
+        unprocessedTable.innerHTML = '<thead><tr><th style="border:1px solid #ddd;padding:4px;text-align:left">Tote</th><th style="border:1px solid #ddd;padding:4px;text-align:left">Reason</th></tr></[...]
 
         // Append elements
         container.appendChild(delayWrapper);
@@ -221,7 +221,7 @@
 
             // Apply configured delay between items if enabled
             if (delayEnabled && delaySeconds > 0) {
-				      console.log(`Delaying ${delaySeconds} seconds`);
+				console.log(`Delaying ${delaySeconds} seconds`);
               await new Promise(r => setTimeout(r, delaySeconds * 1000));
             }
         }
@@ -378,41 +378,26 @@
         console.log('[Bind Automation] handleErrorModal');
         try {
             const text = modalEl?.textContent || document.body.textContent || "";
+            
             // 1. Improved Tote ID Extraction
             // Priorities: 1. ts-style IDs, 2. "tote [id]", 3. Fallback
             const toteMatch = text.match(/\b(ts[A-Za-z0-9]+)\b/i) ||
                               text.match(/\btote\s+([A-Za-z0-9-]+)\b/i);
             const toteId = toteMatch ? toteMatch[1] : 'Unknown';
 
-            // 2. Reason Extraction (Cleaned up Regex Logic)
-            const reasonPatterns = [
-                /Error\s+is\b[^:]*:\s*(Container is empty)/i,
-                /status\s+is\s*(PALLETIZED)/i,
-                /\b(PNH)\b(?=\s+container)/ // Your new PNH regex
-            ];
-
+            // 2. Reason Extraction - Extract full error message from .modal-message
             let reason = "";
-
-            // Check specific elements for the reason first
-            const sourceElements = ['h4', '.errorMessageHeader', '.modal-message'];
-            for (const selector of sourceElements) {
-                const el = modalEl.querySelector(selector);
-                console.log('[Bind Automation] trying ', el);
-                if (el && el.textContent.trim()) {
-                    const content = el.textContent.trim();
-                    // Check if the content matches one of our specific error patterns
-                    //const foundPattern = reasonPatterns.find(reg => reg.test(content));
-                    if (el.textContent.contains('Error:MAQ REACHED')) {
-                        //const match = content.match(foundPattern);
-                        reason = "Error:MAQ REACHED";
-                        break;
-                    }
-                    // If no specific pattern match, keep the raw text as a secondary fallback
-                    if (!reason) reason = content;
-                }
+            const modalMessageEl = modalEl.querySelector('.modal-message');
+            if (modalMessageEl) {
+                // Get the text content and clean it up
+                const rawText = modalMessageEl.textContent.trim();
+                // Extract the first line which contains Item, units, and Error
+                const errorLine = rawText.split('\n')[0].trim();
+                reason = errorLine || rawText;
+                console.log('[Bind Automation] Extracted reason:', reason);
             }
 
-            // Final fallback: first two lines of text
+            // Fallback: first two lines of text
             if (!reason) {
                 reason = text.split('\n').map(s => s.trim()).filter(Boolean).slice(0, 2).join(' — ');
             }
