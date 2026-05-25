@@ -157,7 +157,7 @@
             console.log(`[Bind Automation] Processing: ${id}`);
 
             // Start processing
-            window.aft && window.aft(id);
+            window.aft.scan && window.aft.scan(id);
             status.innerText = `Checking (${i}/${lines.length}): ${id}`;
             status.style.color = "blue";
 
@@ -178,7 +178,8 @@
                 continue;
             }
 
-            // Otherwise proceed 
+            // Otherwise proceed
+            window.aft.scan('C');
             if (true) {
                 //window.aft && window.aft(paxValue);
                 // Wait for palletize completion or possible error modal
@@ -197,12 +198,12 @@
                                         reasonText.includes('mix of different vendor');
 
                     if (isVendorMix) {
-						status.innerText = `No to try (${i}/${lines.length}): ${postResult.toteId || ''}`;
-						status.style.color = "orange";
-						failCount++;
-						updateStats();
-						await new Promise(r => setTimeout(r, 600));
-						continue;
+                        status.innerText = `No to try (${i}/${lines.length}): ${postResult.toteId || ''}`;
+                        status.style.color = "orange";
+                        failCount++;
+                        updateStats();
+                        await new Promise(r => setTimeout(r, 600));
+                        continue;
                     }
                     successCount++;
                     updateStats();
@@ -220,7 +221,7 @@
 
             // Apply configured delay between items if enabled
             if (delayEnabled && delaySeconds > 0) {
-				console.log(`Delaying ${delaySeconds} seconds`);
+				      console.log(`Delaying ${delaySeconds} seconds`);
               await new Promise(r => setTimeout(r, delaySeconds * 1000));
             }
         }
@@ -238,18 +239,18 @@
             let resolved = false;
             const observer = new MutationObserver((mutations) => {
                 for (const mutation of mutations) {
-                    const successStep = document.querySelector('.binding-summary-container');
+                    const successStep = document.querySelector('#binding-summary-container');
                     const msg = document.querySelector(".modal-message");
                     // Check if .binding-summary-container is visible
                     if (successStep && successStep.offsetParent !== null) {
-                        console.log("Found binding-summary-container element!", successStep);
+                        console.log("[Bind Automation] Found binding-summary-container element!", successStep);
                         if (msg && msg.innerText.includes("Current bindings for")) {
                             // Additional check: look for <ul><li> structure
                             const ulElement = successStep.querySelector('ul');
                             if (ulElement) {
                                 const liElements = ulElement.querySelectorAll('li');
                                 if (liElements.length > 0) {
-                                    console.log("Found binding list with", liElements.length, "items");
+                                    console.log("[Bind Automation] Found binding list with", liElements.length, "items");
                                     if (!resolved) {
                                         resolved = true;
                                         observer.disconnect();
@@ -323,6 +324,7 @@
 
     // --- wait for error modal (and handle it) ---
     function waitForErrorModal(timeoutMs = 8000) {
+        console.log('[Bind Automation] waitForErrorModal');
         return new Promise((resolve) => {
             let resolved = false;
 
@@ -366,11 +368,14 @@
     // Helper: locate error modal element
     function findErrorModal() {
         // Common selectors used in example
-        return document.getElementById('errorModal') || document.querySelector('.customModal.errorModal') || document.querySelector('.customModal.customContainer.errorModal') || null;
+        console.log('[Bind Automation] findErrorModal');
+        return document.querySelector('.diversion-awaiting-scan-container');
+        //return document.getElementById('errorModal') || document.querySelector('.modal-instruction.recoverable') || document.querySelector('.customModal.customContainer.errorModal') || null;
     }
 
     // Helper: extract info and dismiss modal
     function handleErrorModal(modalEl) {
+        console.log('[Bind Automation] handleErrorModal');
         try {
             const text = modalEl?.textContent || document.body.textContent || "";
             // 1. Improved Tote ID Extraction
@@ -389,16 +394,17 @@
             let reason = "";
 
             // Check specific elements for the reason first
-            const sourceElements = ['h4', '.errorMessageHeader', '.errorMessageNextStep'];
+            const sourceElements = ['h4', '.errorMessageHeader', '.modal-message'];
             for (const selector of sourceElements) {
                 const el = modalEl.querySelector(selector);
+                console.log('[Bind Automation] trying ', el);
                 if (el && el.textContent.trim()) {
                     const content = el.textContent.trim();
                     // Check if the content matches one of our specific error patterns
-                    const foundPattern = reasonPatterns.find(reg => reg.test(content));
-                    if (foundPattern) {
-                        const match = content.match(foundPattern);
-                        reason = match[1] || match[0];
+                    //const foundPattern = reasonPatterns.find(reg => reg.test(content));
+                    if (el.textContent.contains('Error:MAQ REACHED')) {
+                        //const match = content.match(foundPattern);
+                        reason = "Error:MAQ REACHED";
                         break;
                     }
                     // If no specific pattern match, keep the raw text as a secondary fallback
@@ -419,7 +425,7 @@
 
             return { toteId, reason };
         } catch (err) {
-            console.error('Error handling modal:', err);
+            console.error('[Bind Automation] Error handling modal:', err);
             return { toteId: 'Unknown', reason: 'Error handling modal' };
         }
     }
@@ -435,9 +441,7 @@
         } catch (e) {}
 
         // 2. Button Click
-        const btnSelectors = ['button', '.btn', '.continue', '.close', '.modal-close', '.ok', '.confirm'];
-        const btn = modalEl.querySelector(btnSelectors.join(','));
-        if (btn) btn.click();
+        window.aft.scan("C");
 
         // 3. Nuclear Removal
         setTimeout(() => {
