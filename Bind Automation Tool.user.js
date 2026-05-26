@@ -19,13 +19,14 @@
     let statsEl;
     let successCount = 0;
     let failCount = 0;
+    let toteId = "";
 
     // --- UI creation ---
     function createUI() {
         // Container
         const container = document.createElement('div');
         container.id = 'tm-pnp-automation';
-        container.style = "position: fixed; bottom: 50px; left: 10px; z-index: 9999; background: white; border: 2px solid #232f3e; padding: 10px; border-radius: 4px; box-shadow: 0 4px 6px rgba(0,0,0,0[...]
+        container.style = "position: fixed; bottom: 50px; left: 10px; z-index: 9999; background: white; border: 2px solid #232f3e; padding: 10px; border-radius: 4px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 300px; font-family: Arial, sans-serif; font-size: 13px;";
 
         // IDs textarea
         const label1 = document.createElement('label');
@@ -79,7 +80,7 @@
         // Unprocessed Totes heading + table
         const unprocessedDiv = document.createElement('div');
         unprocessedDiv.id = "unprocessed-div";
-        unprocessedDiv.style = "background:white;border:2px solid rgb(35, 47, 62);border-radius:4px;box-shadow:rgba(0, 0, 0, 0.1) 0px 4px 6px;font-family:Arial, sans-serif;font-size:13px;height:46[...]
+        unprocessedDiv.style = "background:white;border:2px solid rgb(35, 47, 62);border-radius:4px;box-shadow:rgba(0, 0, 0, 0.1) 0px 4px 6px;font-family:Arial, sans-serif;font-size:13px;height:465px;position:fixed;bottom:50px;left:310px;margin-top:10px;overflow-y:auto;font-weight:bold;width:300px;display:none;";
         const unprocessedHeading = document.createElement('div');
         unprocessedHeading.id = "unprocessed-heading";
         unprocessedHeading.innerText = "Unprocessed Totes";
@@ -90,7 +91,7 @@
         const unprocessedTable = document.createElement('table');
         unprocessedTable.id = "unprocessed-totes-table";
         unprocessedTable.style = "width:100%;border-collapse:collapse;margin-top:6px;font-size:12px;border:1px solid #ddd;";
-        unprocessedTable.innerHTML = '<thead><tr><th style="border:1px solid #ddd;padding:4px;text-align:left">Tote</th><th style="border:1px solid #ddd;padding:4px;text-align:left">Reason</th></tr></[...]
+        unprocessedTable.innerHTML = '<thead><tr><th style="border:1px solid #ddd;padding:4px;text-align:left">Tote</th><th style="border:1px solid #ddd;padding:4px;text-align:left">Reason</th></tr></thead><tbody></tbody>';
 
         // Append elements
         container.appendChild(delayWrapper);
@@ -111,7 +112,7 @@
         });
 
         // Start observing for error modals
-        startErrorObserver();
+        //startErrorObserver();
     }
 
     // --- Utility: log unprocessed tote ---
@@ -160,12 +161,15 @@
             window.aft.scan && window.aft.scan(id);
             status.innerText = `Checking (${i}/${lines.length}): ${id}`;
             status.style.color = "blue";
+            toteId = id;
 
             // Wait for either success or error modal
-            const result = await Promise.race([
-                waitForSuccessMessage(),
-                waitForErrorModal()
-            ]);
+            //const result = await Promise.race([
+                //waitForSuccessMessage(),
+                //waitForErrorModal()
+            //]);
+            const result = await waitForSuccessMessage();
+            //console.info('[Bind Automation] Result: ', result);
 
             // If error modal detected and returned a toteId, it has been logged and dismissed.
             if (result && result.type === 'error') {
@@ -179,8 +183,8 @@
             }
 
             // Otherwise proceed
-            window.aft.scan('C');
-            if (true) {
+            if (result && result.type === 'success') {
+                window.aft.scan('C');
                 //window.aft && window.aft(paxValue);
                 // Wait for palletize completion or possible error modal
                 const postResult = await Promise.race([
@@ -221,7 +225,7 @@
 
             // Apply configured delay between items if enabled
             if (delayEnabled && delaySeconds > 0) {
-				console.log(`Delaying ${delaySeconds} seconds`);
+				      console.log(`Delaying ${delaySeconds} seconds`);
               await new Promise(r => setTimeout(r, delaySeconds * 1000));
             }
         }
@@ -234,8 +238,8 @@
 
     // --- wait for success message ---
     function waitForSuccessMessage(timeoutMs = 8000) {
+        console.log("[Bind Automation] waitForSuccessMessage");
         return new Promise((resolve) => {
-            console.log("[Bind Automation] Checking First Modal");
             let resolved = false;
             const observer = new MutationObserver((mutations) => {
                 for (const mutation of mutations) {
@@ -245,20 +249,8 @@
                     if (successStep && successStep.offsetParent !== null) {
                         console.log("[Bind Automation] Found binding-summary-container element!", successStep);
                         if (msg && msg.innerText.includes("Current bindings for")) {
-                            // Additional check: look for <ul><li> structure
-                            const ulElement = successStep.querySelector('ul');
-                            if (ulElement) {
-                                const liElements = ulElement.querySelectorAll('li');
-                                if (liElements.length > 0) {
-                                    console.log("[Bind Automation] Found binding list with", liElements.length, "items");
-                                    if (!resolved) {
-                                        resolved = true;
-                                        observer.disconnect();
-                                        resolve({ type: 'success' });
-                                        return;
-                                    }
-                                }
-                            } else if (!resolved) {
+                            console.log("[Bind Automation] Found binding-summary-container element!");
+                            if (!resolved) {
                                 // Fallback: if no <ul> but message has "Current bindings for", still resolve
                                 resolved = true;
                                 observer.disconnect();
@@ -293,6 +285,7 @@
 
     // --- wait for palletize complete message ---
     function waitForPalletizeCompleteMessage(timeoutMs = 10000) {
+        console.log("[Bind Automation] waitForPalletizeCompleteMessage");
         return new Promise((resolve) => {
             let resolved = false;
             const observer = new MutationObserver(() => {
@@ -326,6 +319,7 @@
     function waitForErrorModal(timeoutMs = 8000) {
         console.log('[Bind Automation] waitForErrorModal');
         return new Promise((resolve) => {
+            setTimeout( () => {
             let resolved = false;
 
             // If an error modal already present, handle immediately
@@ -362,6 +356,7 @@
                     resolve(null); // no error modal within timeout
                 }
             }, timeoutMs);
+            }, 1000);
         });
     }
 
@@ -369,38 +364,41 @@
     function findErrorModal() {
         // Common selectors used in example
         console.log('[Bind Automation] findErrorModal');
-        return document.querySelector('.diversion-awaiting-scan-container');
+        return document.querySelector('#diversion-awaiting-scan-container') || null;
         //return document.getElementById('errorModal') || document.querySelector('.modal-instruction.recoverable') || document.querySelector('.customModal.customContainer.errorModal') || null;
     }
 
     // Helper: extract info and dismiss modal
     function handleErrorModal(modalEl) {
-        console.log('[Bind Automation] handleErrorModal');
+        console.log('[Bind Automation] handleErrorModal')
         try {
-            const text = modalEl?.textContent || document.body.textContent || "";
-            
+            const text = modalEl?.textContent || "";
+
             // 1. Improved Tote ID Extraction
             // Priorities: 1. ts-style IDs, 2. "tote [id]", 3. Fallback
-            const toteMatch = text.match(/\b(ts[A-Za-z0-9]+)\b/i) ||
+            //const toteMatch = text.match(/\b(ts[A-Za-z0-9]+)\b/i) ||
                               text.match(/\btote\s+([A-Za-z0-9-]+)\b/i);
-            const toteId = toteMatch ? toteMatch[1] : 'Unknown';
+            //const toteId = toteMatch ? toteMatch[1] : 'Unknown';
 
             // 2. Reason Extraction - Extract full error message from .modal-message
             let reason = "";
             const modalMessageEl = modalEl.querySelector('.modal-message');
+                //console.log('[Bind Automation] modalMessageEl :', modalMessageEl.textContent);
             if (modalMessageEl) {
                 // Get the text content and clean it up
                 const rawText = modalMessageEl.textContent.trim();
+                //console.log('[Bind Automation] rawText :', rawText);
                 // Extract the first line which contains Item, units, and Error
                 const errorLine = rawText.split('\n')[0].trim();
+                //console.log('[Bind Automation] errorLine :', errorLine);
                 reason = errorLine || rawText;
-                console.log('[Bind Automation] Extracted reason:', reason);
+                //console.log('[Bind Automation] Extracted reason:', reason);
             }
 
             // Fallback: first two lines of text
-            if (!reason) {
-                reason = text.split('\n').map(s => s.trim()).filter(Boolean).slice(0, 2).join(' — ');
-            }
+            //if (!reason) {
+                //reason = text.split('\n').map(s => s.trim()).filter(Boolean).slice(0, 2).join(' — ');
+            //}
 
             // Log result
             logUnprocessedTote(toteId, reason);
@@ -417,6 +415,7 @@
 
     // Sub-function to keep logic separated
     function dismissModal(modalEl) {
+        console.log('[Bind Automation] dismissModal');
         if (!modalEl) return;
 
         // 1. Keyboard Shortcut
@@ -426,19 +425,21 @@
         } catch (e) {}
 
         // 2. Button Click
-        window.aft.scan("C");
+        setTimeout(() => {
+          window.aft.scan("b");
+        }, 1000);
 
         // 3. Nuclear Removal
-        setTimeout(() => {
-            const overlay = document.querySelector('.overlay');
-            overlay?.remove();
-            modalEl?.remove();
-        }, 300);
+        //setTimeout(() => {
+            //const overlay = document.querySelector('.overlay');
+            //overlay?.remove();
+            //modalEl?.remove();
+        //}, 300);
     }
 
     // --- Start script when page loads ---
     window.addEventListener('load', () => {
         // small delay to ensure page UI exists
-        setTimeout(createUI, 200);
+        setTimeout(createUI, 150);
     });
 })();
