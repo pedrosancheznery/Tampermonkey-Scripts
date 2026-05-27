@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+		<meta charset="UTF-8">
+		<!--
+	Created by: swlls
+	Original located at: drive.corp.amazon.com/documents/swlls@/Printmon2LATEST.html
+
+	Modified by pefsanch for use by HOU3 associates
+	This version is available at: https://drive.corp.amazon.com/documents/pefsanch@/printmon3_HOU3/Printmon3_HOU3.html
+	-->
+		<script src="https://code.jquery.com/jquery-3.7.1.slim.min.js" integrity="sha256-kmHvs0B+OpCW5GVHUNjv9rOmY0IvSIRcf7zGUDTDQM8=" crossorigin="anonymous"></script>
+		<!-- Bootstrap -->
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css">
+		<!-- Latest compiled and minified JavaScript -->
+		<!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script> -->
+		<style>
+			h1 {
+				color: #003366;
+				font-size: 30pt;
+				font-weight: bold;
+				text-shadow: 3px 3px 0px #8A9AAB;
+				padding: 0px;
+				margin-top: 5px;
+				margin-bottom: -10px;
+				# font-family: "Forte", "Helvetica", "Arial", sans-serif;
+				font-family: "Apple Chancery", "Snell Roundhand", cursive;
+			}
+
+			.grid-container {
+				display: grid;
+				grid-template-columns: repeat(3, 33%);
+				grid-gap: 1%;
+				width: 98%;
+				margin: auto;
+			}
+
+			.grid-container-top {
+				display: grid;
+				grid-template-columns: 305px 80%;
+				grid-gap: 1%;
+				width: 98%;
+				margin: auto;
+			}
+			
+			.btn-history {
+				padding: 2px 8px;    /* Tightens the vertical space */
+				line-height: 1.1;    /* Brings the two lines closer together */
+				font-size: 0.75rem;  /* Makes text slightly smaller */
+			}
+
+		</style>
+		<script type="text/javascript">
+			let webuiport = 5965;
+			let empId = (() => {
+				try {
+					return document.cookie.split("fcmenu-employeeId=")[1].split(";")[0];
+				} catch (err) {
+					return "";
+				}
+			})();
+			let firstRun = true;
+			let requireBadge = false; //currently broken due to cors access to ajax api for fclm
+			let printenabled = true;
+			let isPrinting = false; // Safeguard flag
+			if (requireBadge) {
+				updateAlert();
+			}
+
+			function getText() {
+				// read text from URL location
+				let request = new XMLHttpRequest();
+				request.open('GET', 'http://www.puzzlers.org/pub/wordlists/pocket.txt', true);
+				request.send(null);
+				request.onreadystatechange = function() {
+					if (request.readyState === 4 && request.status === 200) {
+						let type = request.getResponseHeader('Content-Type');
+						if (type.indexOf("text") !== 1) {
+							return request.responseText;
+						}
+					}
+				}
+			}
+
+			function getStatus(url) {
+				let xmlhttp;
+				xmlhttp = new XMLHttpRequest();
+				xmlhttp.open("GET", url, true);
+				xmlhttp.send();
+			}
+
+			function asciihex(str) {
+				let text = "";
+				for (let i = 0, l = str.length; i < l; i++) {
+					let hex = Number(str.charCodeAt(i)).toString(16);
+					text += hex;
+				}
+				return text;
+			}
+
+			function focusElement(id) {
+				document.getElementById(id).value = "";
+				document.getElementById(id).focus();
+			}
+
+			function KeyCheck(e) {
+				if (e.which === 13 && !isPrinting) {
+					isPrinting = true;
+					e.preventDefault();
+
+					// Cache elements and states
+					const $barcode = $('#barcodedata');
+					const $qty = $('#quantity');
+					const $focused = $(document.activeElement);
+					
+					const jumpChecked = $('#jumptoq').prop('checked');
+					const printChecked = $('#printafter').prop('checked');
+
+					// Case 1: Focus is on Barcode field
+					if ($focused.is($barcode)) {
+						if (jumpChecked) {
+							setTimeout(() => { focusElement("quantity"); }, 10);
+						} else if (printChecked) {
+							print($barcode.val(), $('#displaytext').val(), $('#secondtext').val());
+						} else {
+							$barcode.focus();
+						}
+					} 
+					// Case 2: Focus is on Quantity field
+					else if ($focused.is($qty) && jumpChecked && printChecked) {
+						print($barcode.val(), $('#displaytext').val(), $('#secondtext').val());
+						setTimeout(() => { focusElement("barcodedata"); }, 10);
+					}
+					setTimeout(() => { isPrinting = false; }, 500);
+				}
+			}
+
+			function printBulk() {
+				if (!printenabled) { return; }
+				if (document.getElementById("displayMode").checked) {
+					document.getElementById("textAreaID").disabled = true;
+					return;
+				}
+				let textArea = document.getElementById("textAreaID");
+				let asins = textArea.value.split('\n');
+				if (document.getElementById("removeDuplicates").checked) { asins = [...new Set(asins)] }
+				asins.forEach(e => {
+					print(e);
+				});
+				textArea.value = textArea.value;
+			}
+
+			function printAll(node) {
+				let text = node.parentElement.parentElement.childNodes
+				for (let i = 3; i < text.length; i += 2) {
+					print(text[i].innerHTML)
+				}
+			}
+
+			function getJSON(url, callback) {
+				let xhr = new XMLHttpRequest();
+				xhr.withCredentials = true;
+				xhr.open('GET', url, true);
+				xhr.responseType = 'json';
+				xhr.onreadystatechange = function() {
+					let status = xhr.status;
+					if (status == 0) {
+						callback(null, xhr.response);
+					}
+				}
+				xhr.onload = function() {
+					let status = xhr.status;
+					if (status == 200) {
+						callback(null, xhr.response);
+					} else {
+						callback(status);
+					}
+				};
+				xhr.send();
+			}
+
+			function updateAlert() {
+				let badgeBarcode = prompt("Please scan or enter your badge number or employee login.", "")
+				console.log(badgeBarcode)
+				let emptyString = "";
+				if (badgeBarcode === null || badgeBarcode === emptyString || badgeBarcode === undefined) {
+					const warnText = '<div class="grid-container-top"><h1>You must enter a valid login to use Printmon HOU3.</h1><br><h3>To retry entering your login, press F5 or hit the reload button above.</h3></div>';
+					document.body.outerHTML = warnText;
+					// console.log(err);
+				}
+				try {
+					getJSON("https://fclm-portal.amazon.com/ajax/partialEmployeeSearch?term=" + (badgeBarcode == null ? 1 : badgeBarcode), function(err, data) {
+						try {
+							if (data.value[0] == null) {
+								console.log(data);
+								console.log(1)
+								printenabled = false;
+								const myNode = document.getElementById('body');
+								const warnText = '<div class="grid-container-top"><h1>You must enter a valid login to use Printmon HOU3.</h1><br><h3>To retry entering your login, press F5 or hit the reload button above.</h3></div>';
+								while (myNode.firstChild) {
+									myNode.removeChild(myNode.firstChild);
+								}
+								myNode.innerHTML += warnText;
+							} else if (data.value.length > 1) {
+								console.log(data);
+								console.log(3)
+								printenabled = false;
+								const myNode = document.getElementById('body');
+								const warnText = '<div class="grid-container-top"><h1>Enter a full login or badge ID.</h1><br><h3>To retry entering your login, press F5 or hit the reload button above.</h3></div>';
+								while (myNode.firstChild) {
+									myNode.removeChild(myNode.firstChild);
+								}
+								myNode.innerHTML += warnText;
+							} else {
+								console.log(data);
+								empId = data.value[0].employeeId;
+							}
+						} catch (e) {
+							console.log(2)
+							printenabled = false;
+							const myNode = document.getElementById('body');
+							while (myNode.firstChild) {
+								myNode.removeChild(myNode.firstChild);
+							}
+							myNode.innerHTML += '<div class="grid-container-top"><h1>Using Printmon HOU3 offline or from a local file is disallowed.</h1><br><h3>To access Printmon HOU3, make sure you are connected to the amazon network and go to <a href="https://drive-render.corp.amazon.com/view/mojordaq@/printmon_2_IAH1/Printmon2_IAH1.html">https://drive-render.corp.amazon.com/view/mojordaq@/printmon_2_IAH1/Printmon2_IAH1.html</a></h3></div>';
+						}
+					});
+				} catch (e) {
+					console.log(3)
+					printenabled = false;
+					const myNode = document.getElementById('body');
+					const warnText = '<div class="grid-container-top"><h1>You must enter a valid login to use Printmon 2.</h1><br><h3>To retry entering your login, press F5 or hit the reload button above.</h3></div>';
+					while (myNode.firstChild) {
+						myNode.removeChild(myNode.firstChild);
+					}
+					myNode.innerHTML += "hello";
+				}
+			}
+
+			let lastItem = [];
+
+			function addhistory(barcode, text, text2) {
+				if ($("#historyDiv button:contains('" + barcode + "')").length > 0) {
+					console.info("Duplicate button blocked:", barcode);
+					return; 
+				}
+				lastItem.unshift(barcode);
+				lastItem.pop();
+				$("#historyDiv").append(`<row><button type="button" class="btn btn-success btn-history w-100" onclick="rawPrint('${barcode}', '${text}', '${text2}');">${barcode}<br>${text}<br>${text2}</button></row>`);
+			}
+
+			function newPopup(url) {
+				window.open(url, 'popUpWindow', 'height=250,width=700,left=100,top=100,resizable=yes,scrollbars=yes,toolbar=yes,menubar=no,location=no,directories=no, status=yes');
+			}
+
+			function basicPopup(url) {
+				popupWindow = window.open(url, 'popUpWindow', 'height=500,width=500,left=100,top=100,resizable=yes,scrollbars=yes,toolbar=yes,menubar=no,location=no,directories=no, status=yes');
+			}
+
+			function printTestLabel() {
+				getRequest("http://localhost:5965/printer?action=print&type=testpage", testresult, function() {});
+			}
+
+			function testresult(message) {
+				if (message == "invalid")
+					alert("Error processing request");
+			}
+
+			function getRequest(url, handle_response, handle_errors) {
+				const controller = new AbortController();  
+				const timeout = 15000; // ms  
+				const timer = setTimeout(() => controller.abort(), timeout);
+				  
+			  fetch(url, { signal: controller.signal })    
+				  .then(response => {      
+				  clearTimeout(timer);      
+				  if (!response.ok) throw new Error('HTTP ' + response.status);      
+				  return response.text();    
+			  })    
+			  .then(text => handle_response(text))    
+			  .catch(err => {      
+				  // Fetch aborts produce a DOMException; treat as timeout if needed      
+				  handle_errors(err);      
+				  // Optional: user-visible alert removed or keep if desired      
+				  // alert('Unable to connect to the service: ' + err.message);    
+			  });
+		  }
+		  
+			function showcopyhelp() {
+				let help = `
+		when copy barcode is checked, barcodes will be copied to the clipboard as plain text when printed
+
+		when display barcode is checked, barcodes will be shown on-screen instead of being printed. all bulk print options will be disabled if this is checked
+					`
+				alert(help)
+			}
+
+			function updateCheckBoxes() {
+				let checked = document.getElementById("displayMode").checked;
+				// document.getElementById("copyMode").disabled = checked;
+				// document.getElementById("copyMode").checked = false;
+				document.getElementById("bulkbutton").disabled = checked;
+				document.getElementById("textAreaID").disabled = checked;
+				<!-- document.getElementById("printallzones").disabled = checked; -->
+				<!-- document.getElementById("printalliss").disabled = checked; -->
+			}
+
+
+			function rawPrint(barcode, text1, text2) {
+				const barcodeHeight = 120; // height in dots for ^BC
+				const gap = 40;            // spacing between elements
+				const baseX = 10; // Left Margin
+				const baseY = 30; // Top Margin
+
+				let zpl = `^XA
+^MUd,200,300
+^PW600
+^PR10,3
+^LH0,20
+
+^BY3,3.0,${barcodeHeight}
+^FT${baseX},${baseY},2
+^BCN,${barcodeHeight},Y,N,N
+^FD${barcode}^FS
+
+^FT${baseX},${baseY + barcodeHeight + gap + 30},2
+^A0N,50,50
+^FD${text1}^FS
+
+^FT${baseX},${baseY + barcodeHeight + gap + 40 + gap},2
+^A0N,50,50
+^FD${text2}^FS
+
+^PQ1
+^XZ`;
+				let xhr = new XMLHttpRequest();
+				xhr.open("POST", "http://localhost:5964", true);
+				xhr.send(eval("`" + zpl + "`"));
+			}
+
+			function printraw(b) {
+				let dx = 30,
+					dy = -100;
+				let zpl = `^XA
+^MUd,200,300
+^PW600
+^PR10,3
+^LH0,20
+^BY3,3.0,120
+^FT${10+dx},${125+dy},2
+
+^FWN
+^FD
+^FS
+^LRN
+
+^FT${10+dx},${180+dy},2
+^A0N,50
+^FWN
+^FD
+^FS
+
+^FT${350+dx},${180+dy},2
+^A0N,30
+^FWN
+^FD
+^FS
+
+^PQ1
+^LRN
+
+^FT${15+dx},${440+dy}
+^A0N,50
+^FWN
+^FB510,7,,
+^FD${b}
+^FS
+
+^XZ`
+				let xhr = new XMLHttpRequest();
+				xhr.open("POST", "http://localhost:5964", true);
+				xhr.send(eval("`" + zpl + "`"));
+				addhistory(b, b, "printraw");
+				document.getElementById('barcodedata').value = b;
+				document.getElementById('barcodedata').select();
+			}
+
+			function print(barcode, text = "", text2 = "", update = true) {
+				if (document.getElementById("hidebarcode").checked) {
+					printraw(barcode);
+					return;
+				}
+
+				if (!printenabled) { return; }
+				if (update) {
+					updateCheckBoxes();
+					print(barcode, text, text2, false);
+					return;
+				}
+				barcode = barcode.trim();
+				text = text.trim();
+				text2 = text2.trim();
+				if (document.getElementById("copyMode").checked) {
+					navigator.clipboard.writeText(barcode);
+				}
+				if (document.getElementById("displayMode").checked) {
+					newPopup("https://barcodeapi.org/api/code128/" + barcode);
+					return;
+				}
+				//let id = "";
+				//for (let i = 0; i < 10; i++) {
+					//id += Math.floor(Math.random() * 9);
+				//}
+				/*
+				getStatus(
+					"http://localhost:" + webuiport +
+					"/printer?action=print&type=barcode&" +
+					"data=" + asciihex(barcode) +
+					"&text=" + asciihex(text) +
+					"&text=" + asciihex(text2) +
+					"&quantity=" + document.getElementById("quantity").value +
+					"&badgeid=" + empId +
+					"&seq=" + id
+				);
+				*/
+				rawPrint(barcode, text, text2);
+				addhistory(barcode, text, text2);
+			}
+
+			function printQR(barcode, update = true) {
+				let dx = 30,
+					dy = -100;
+				let zpl = `^XA
+^PW600
+^FO80,50
+^FWR
+^BQN,2,10,M,A
+^FD${barcode}
+^FS
+^FO100,350
+^FB250,1,0,C
+^A0N,25,25
+^FDText Below QR Code
+^FS
+^XZ`
+				let xhr = new XMLHttpRequest();
+				xhr.open("POST", "http://localhost:5964", true);
+				xhr.send(eval("`" + zpl + "`"));
+				addhistory(barcode, "QR");
+				document.getElementById('barcodedata').value = barcode;
+				document.getElementById('barcodedata').select();
+			}
+
+		</script>
+		<title>Printmon HOU3</title>
+		<link rel="icon" type="image/png" href="data:image/png;base64,Qk02AwAAAAAAADYAAAAoAAAAEAAAABAAAAABABgAAAAAAAADAAAAAAAAAAAAAAAAAAAAAAAAPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8j////////Pi8jPi8jPi8jPi8jPi8jAJn/AJn/Pi8jAJn/AJn/Pi8jPi8jPi8jPi8j////////Pi8jPi8jPi8jPi8jPi8jAJn/AJn/Pi8jAJn/AJn/Pi8jPi8jPi8jPi8j////////Pi8jPi8jPi8jPi8jPi8jAJn/AJn/Pi8jAJn/AJn/Pi8jPi8jPi8jPi8j////////Pi8jPi8jPi8jPi8jPi8jAJn/AJn/Pi8jAJn/AJn/Pi8jPi8jPi8jPi8j////////Pi8jPi8jPi8jPi8jPi8jAJn/AJn/Pi8jAJn/AJn/Pi8jPi8jPi8jPi8j////////Pi8jPi8jPi8jPi8jPi8jAJn/AJn/Pi8jAJn/AJn/Pi8jPi8jPi8jPi8j////////////////////Pi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8j////////////////////////Pi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8j////////Pi8jPi8jPi8j////////Pi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8j////////Pi8jPi8jPi8j////////Pi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8j////////Pi8jPi8jPi8j////////Pi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8j////////////////////////Pi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8j////////////////////Pi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8jPi8j">
+		<meta http-equiv="Content-Style-Type" content="text/css">
+	</head>
+	<body>
+		<div class="px-3 py-3 mb-3 text-center bg-light border-bottom shadow-sm">
+		  <!-- Your Navy Color Applied Here -->
+		  <h1 class="display-2 fw-bold text-uppercase" style="color: #003366; text-shadow: 3px 3px 0px #8A9AAB;">
+			Printmon HOU3
+		  </h1>
+		  <div class="col-lg-6 mx-auto">
+			<p class="lead mb-3">Real-time barcode processing for warehouse operations.</p>
+		  </div>
+		</div>
+		<div class="container">
+			<div class="row">
+				<div class="col-md-6">
+					<div class="bg-light card">
+						<div class="card-header">Single Printer</div>
+						<div class="card-body">
+							<div>
+								<div class="form-check">
+									<input class="form-check-input" id="printafter" type="checkbox" checked="checked" >
+									<label class="form-check-label" for="printafter">Print after scanning</label>
+								</div>
+								<div class="form-check">
+									<input class="form-check-input" id="jumptoq" type="checkbox">
+									<label class="form-check-label" for="jumptoq">Jump to quantity</label>
+								</div>
+								<div class="form-check">
+									<input class="form-check-input" id="nowhitespace" type="checkbox" checked="checked" >
+									<label class="form-check-label" for="nowhitespace">Trim whitespace characters</label>
+								</div>
+								<div class="form-check">
+									<input class="form-check-input" id="multibar" type="checkbox">
+									<label class="form-check-label" for="multibar">Enter multiple barcodes</label>
+								</div>
+								<div class="form-check">
+									<input class="form-check-input" id="copyMode" type="checkbox">
+									<label class="form-check-label" for="copyMode">Copy barcode</label>
+								</div>
+								<div class="form-check">
+									<input class="form-check-input" id="displayMode" type="checkbox" onchange="updateCheckBoxes()">
+									<label class="form-check-label" for="displayMode">Display barcode <span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span></label>
+								</div>
+								<div class="form-check">
+									<input class="form-check-input" id="hidebarcode" type="checkbox">
+									<label class="form-check-label" for="hidebarcode">Hide barcode on label</label>
+								</div>
+							</div>
+							<div class="row">
+								<label class="form-label" for="barcodedata">Scan or Enter Barcode Data <i style="font-size: small">(Limited to 43 Characters)</i></label>
+								<input id="barcodedata" class="form-control" type="text">
+							</div>
+							<div class="row">
+								<label class="form-label" for="displaytext">Enter Display Text</label>
+								<input id="displaytext" class="form-control" type="text">
+							</div>
+							<div class="row">
+								<label class="form-label" for="secondtext">Optional Text</label>
+								<input id="secondtext" class="form-control" type="text">
+							</div>
+							<div class="row">
+								<label class="form-label" for="quantity">Enter Quantity <i style="font-size: small">(Maximum is 500)</i></label>
+								<input maxlength="3" id="quantity" value="1" class="form-control" type="text">
+							</div>
+							<div class="row p-2">
+								<div class="col">
+									<button id="printLabel" type="button" class="btn btn-primary" onclick='print(document.getElementById("barcodedata").value, document.getElementById("displaytext").value, document.getElementById("secondtext").value);'>Print Label</button>
+								</div>
+								<div class="col">
+									<button id="printQR" type="button" class="btn btn-primary" onclick='printQR(document.getElementById("barcodedata").value);'>Print QR</button>
+								</div>
+							</div>
+							<div class="row p-2">
+								<div class="col">
+									<button id="printTest" type="button" class="btn btn-secondary" onclick="printTestLabel(); return false;">Print test label</button>
+									<button type="button" class="btn btn-info" onclick="window.open('http://localhost:5965/barcodegenerator')" ;="">Printmon 1</button>
+									<button id="barcodeGenerator" type="button" class="btn btn-warning" onclick="window.open('https://prod.barcodes.robotics.amazon.dev/?fcmenu-sensitive=eyJraWQiOiIxIiwiYWxnIjoiUlMyNTYifQ.eyIxMSI6IjEwMC44NC42MS4xNjciLCIxMiI6ZmFsc2UsIjEzIjp0cnVlLCIxNCI6Imh0dHBzOi8vZmNtZW51LWlhZC1yZWdpb25hbGl6ZWQuY29ycC5hbWF6b24uY29tIiwiMTUiOiIiLCIxNiI6IjEzODYxNTU2IiwiMTciOiJGQ19NRU5VX0lOVEVSTkFMIiwiMSI6IjIwMjcyMjgzMSIsIjIiOiJwZWZzYW5jaCIsIjMiOiJvcGVuaWQiLCI0IjoiSE9VMyIsIjUiOiIzMjAiLCI2IjpudWxsLCI3IjoiZW5fVVMiLCI4IjpudWxsLCI5IjpudWxsLCJkZWVwQ2hlY2tUaW1lc3RhbXAiOm51bGwsIjEwIjpudWxsLCJpc3MiOiJmY21lbnUtaWFkLXJlZ2lvbmFsaXplZC5jb3JwLmFtYXpvbi5jb20iLCJleHAiOjE3NTYzMTA1MDB9.YFP63nIFDk1n_XKdVvvOdxcjISm9LTKY17qw5JOCbPLxIs7zle_dr4WycSpHw9zRAgcvOSnicNvK1u5kcTM0x8oVwTIbGGPI48lS67UGIIJn9Luv8X26IV4mSRak-v_Ru-767pn5riSoz0muvAHnRgPuddFX6LNL0moLW9x6-GQrdkC80oku9bNDqPY1dEU6AoCu4JVu6Viq_Uge-oODwy8ex4bM0Sxe1sWoFTgN2jB-dxB3eX1uGKc0hNrp_t-sOD7thAXMQq50nnHdSYjNYl-R6pqZGXspMZDwShsUSq1dHbyLKn1FHJGFijoOG_ZKnEZy8ujM8IEcQy24cJSxqw#auto')" ;="">Barcode Generator</button>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="col-md-3">
+					<div class="card">
+						<div class="card-header">History</div>
+						<div class="card-body">
+							<div id="historyDiv" class="container d-grid gap-2"></div>
+						</div>
+					</div>
+				</div>
+				<div class="col-md-3 invisible" id="multibarcode">
+					<div class="card">
+						<div class="card-header">Bulk Printer</div>
+						<div class="card-body">
+							<textarea class="form-control" id="textAreaID" style="height: 322px;"></textarea>
+							<!-- <br> -->
+							<div class="form-check">
+								<input class="form-check-input" id="removeDuplicates" type="checkbox" >
+								<label class="form-check-label" for="removeDuplicates">Remove duplicate values</label>
+							</div>
+							<button type="button" class="btn btn-primary" id="bulkbutton" onclick="printBulk();document.getElementById('textAreaID').select();">Print Labels</button>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="row p-2">
+				<div class="col">
+					<button class="btn btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#myModal">About</button>
+				</div>
+			</div>
+		</div>
+		<div class="modal fade" id="myModal" tabindex="-1" role="dialog">
+			<div class="modal-dialog" role="document">
+				<div class="modal-content">
+					<div class="modal-header">
+						<button type="button" class="close" data-bs-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+						<h4 class="modal-title">Printmon HOU3</h4>
+					</div>
+					<div class="modal-body">
+						<p>Created by swlls@</p>
+						<p>Additional code contributions from harnoiss@</p>
+						<p>Heavily modified by pefsanch@ for use by HOU3 associates</p>
+						<p>
+			Printmon HOU3 is a tool that allows printing from Windows to Zebra printers.
+			Specifically, this version of Printmon is intended for use with the Zebra ZDesigner GX430t printer, though it can probably be used with any printer that the original Printmon supports. Other printers are currently untested.
+
+			Printmon HOU3 was designed as an aid primarily for Universal Problem Solvers at HOU3, but can be adapted for use by anyone who uses the original version of Printmon.
+			It is not a replacement for the original tool, but rather a convenient set of add-ons that speed up repetitive common tasks.
+
+			Many thanks to Ryan Schimer and Jeff Conner for creating the original tool, which this version uses as a backend.
+						</p>
+					</div>
+					<div class="modal-footer">
+						<button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close</button>
+					</div>
+				</div><!-- /.modal-content -->
+			</div><!-- /.modal-dialog -->
+		</div><!-- /.modal -->
+		<div class="invisible">
+			<input type="text" id="configInput" />
+			<button id="loadConfig" class="btn btn-outline-primary" onclick="loadConfig();">Load Config</button>
+		</div>
+		<script type="text/javascript">
+			let table = document.getElementById("masterTable");
+
+			function loadConfig() {
+				// console.log("loading config");
+				let config = JSON.parse(document.getElementById("configInput").value);
+				parse(config);
+				console.log("config:", config);
+				load(config);
+			}
+
+			// Used by loadConfig
+			function parse(c) {
+				// console.log("parsing config");
+				Object.keys(c).forEach(e => {
+					if (typeof(c[e]) === "string" && c[e].indexOf("(function") === 0) {
+						c[e] = eval(c[e]);
+					} else if (c[e].constructor.name === "Object") {
+						parse(c[e]);
+					}
+				});
+			}
+
+			// Used by loadConfig
+			function load(config, reference) {
+				try { swap(config.swap || {}); } catch (err) {}
+				try { remove(config.remove || {}); } catch (err) {}
+				try { add(config.add || {}); } catch (err) {}
+			}
+
+			// Used by loadConfig
+			function add(a) {
+				console.log(a);
+				if (a.constructor.name === "Array") {
+					a.forEach(e => {
+						add(e);
+					});
+					return;
+				}
+				console.groupCollapsed("add:", a);
+				console.log("title:", a.title);
+				let el = createElement("td", {
+
+				}).add(createElement("h2", {
+					innerHTML: a.title,
+				}));
+				if (a.buttons) {
+					a.buttons.forEach(e => {
+						console.log(`button:\n\ttext: ${e.text}\n\tprint: ${e.print}`);
+						el.add("\n").add(createElement("button", {
+							innerHTML: e.text,
+							onclick: `print(${e.print})`,
+						}))
+					});
+				}
+				if (a.content) {
+					console.log(a.content);
+					el.add(eval(a.content)());
+				}
+				// document.body.add(el);
+				let len = 4;
+				let added = false;
+				Array.from(table.rows).forEach(e => {
+					console.log(e);
+					if (e.cells.length < len) {
+						console.log("adding to:", e)
+						e.add(el);
+						added = true;
+					} else {
+						console.log(e.cells.length);
+					}
+				});
+				if (!added) {
+					console.log("adding new row")
+					table.add(createElement("tr").add(el));
+				}
+				console.groupEnd();
+			}
+
+			function remove(a) {
+				if (a.constructor.name === "Array") {
+					a.forEach(e => {
+						remove(e);
+					});
+				}
+				table.rows[a.row - 1].cells[a.col - 1].remove();
+			}
+
+			function swap(a) {
+				if (a.constructor.name === "Array") {
+					a.forEach(e => {
+						swap(e);
+					});
+				}
+			}
+
+			// Bootstrap
+			$(document).ready(function() {
+				$('#barcodedata, #quantity').on('keyup', KeyCheck);
+				$('#multibar').change(function () {
+					if ($(this).is(':checked')) {
+						$("#multibarcode").removeClass("invisible");
+						$("#printafter").prop("disabled", true);
+						$("#jumptoq").prop("disabled", true);
+						$("#copyMode").prop("disabled", true);
+						$("#displayMode").prop("disabled", true);
+						$("#hidebarcode").prop("disabled", true);
+						$("#barcodedata").prop("disabled", true);
+						$("#displaytext").prop("disabled", true);
+						$("#secondtext").prop("disabled", true);
+						$("#quantity").prop("disabled", true);
+						$("#printLabel").prop("disabled", true);
+						$("#printTest").prop("disabled", true);
+						$("#printQR").prop("disabled", true);
+						$("#barcodeGenerator").prop("disabled", true);
+					} else {
+						$("#multibarcode").addClass("invisible");
+						$("#printafter").prop("disabled", false);
+						$("#jumptoq").prop("disabled", false);
+						$("#copyMode").prop("disabled", false);
+						$("#displayMode").prop("disabled", false);
+						$("#hidebarcode").prop("disabled", false);
+						$("#barcodedata").prop("disabled", false);
+						$("#displaytext").prop("disabled", false);
+						$("#secondtext").prop("disabled", false);
+						$("#quantity").prop("disabled", false);
+						$("#printLabel").prop("disabled", false);
+						$("#printTest").prop("disabled", false);
+						$("#printQR").prop("disabled", false);
+						$("#barcodeGenerator").prop("disabled", false);
+					}
+				});
+				$('#multibar').trigger('change');
+			});
+		</script>
+
+	</body>
+</html>
