@@ -5,6 +5,7 @@
 // @author       Pedro Sanchez (pefsanch)
 // @description  Read scannable IDs from user input and submit them to a form
 // @match        https://frost-prod-jlb-iad.iad.proxy.amazon.com/packnhold/create
+// @match        https://frost-prod.na.aftx.amazonoperations.app/packnhold/create
 // @grant        GM.xmlHttpRequest
 // @grant        GM_addStyle
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=amazon.com
