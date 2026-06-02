@@ -5,6 +5,7 @@
 // @description  Batch check totes with API calls, display results in table, and export to CSV
 // @author       Pedro Sanchez (pefsanch)
 // @match        https://wd-repair-portal-na.aka.amazon.com/resources/ReCommerceFCWebToolsUI/html/listTote.html
+// @match        https://vret-list-tote.na.aft.amazonoperations.app/resources/ReCommerceFCWebToolsUI/html/listTote.html
 // @grant        GM_xmlhttpRequest
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=amazon.com
 // @downloadURL  https://raw.githubusercontent.com/pedrosancheznery/Tampermonkey-Scripts/main/Tote%20Bulk%20Checker.user.js
