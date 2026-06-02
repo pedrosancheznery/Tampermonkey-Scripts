@@ -5,6 +5,7 @@
 // @description  Creates and updates a table with flow scan data.
 // @author       Pedro Sanchez (pefsanch)
 // @match        https://sortcenter-menu-na.amazon.com/containerization/flow
+// @match        https://cmmui.na.aftx.amazonoperations.app/containerization/flow
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_addStyle
@@ -41,7 +42,7 @@
                 return {};
             }
         },
-        
+
         add: (ddKey, ddValue) => {
             const dds = StorageManager.getAll();
             if (!dds[ddKey]) {
@@ -52,7 +53,7 @@
             }
             return false;
         },
-        
+
         edit: (ddKey, newValue) => {
             const dds = StorageManager.getAll();
             if (dds[ddKey]) {
@@ -63,7 +64,7 @@
             }
             return false;
         },
-        
+
         delete: (ddKey) => {
             const dds = StorageManager.getAll();
             if (dds[ddKey]) {
@@ -74,7 +75,7 @@
             }
             return false;
         },
-        
+
         getByKey: (ddKey) => {
             const dds = StorageManager.getAll();
             return dds[ddKey] || null;
@@ -94,12 +95,12 @@
 
         // Trigger input event
         inputField.dispatchEvent(new Event('input', { bubbles: true }));
-        
+
         // Trigger Enter key
         inputField.dispatchEvent(new KeyboardEvent('keypress', {
             key: 'Enter', keyCode: 13, which: 13, bubbles: true
         }));
-        
+
         inputField.dispatchEvent(new Event('blur', { bubbles: true }));
         inputField.blur();
     }
