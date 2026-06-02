@@ -5,6 +5,7 @@
 // @author       Pedro Sanchez (pefsanch)
 // @description  Extract scannable IDs from container hierarchy and copy to clipboard via a button (only containers with qty > 0)
 // @match        https://qi-fcresearch-na.corp.amazon.com/HOU3/*
+// @match        https://qifcr.na.aftx.amazonoperations.app/HOU3/*
 // @match        https://fcresearch-na.aka.amazon.com/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=amazon.com
 // @homepage     https://github.com/pedrosancheznery/Tampermonkey-Scripts/
