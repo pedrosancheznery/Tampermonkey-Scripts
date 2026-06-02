@@ -126,7 +126,8 @@
         return new Promise((resolve) => {
             GM.xmlHttpRequest({
                 method: "POST",
-                url: "https://qi-fcresearch-na.corp.amazon.com/HOU3/results/container-hierarchy",
+                url: "https://qifcr.na.aftx.amazonoperations.app/HOU3/results/container-hierarchy",
+                //url: "https://qi-fcresearch-na.corp.amazon.com/HOU3/results/container-hierarchy",
                 data: `s=${containerId}`,
                 headers: {
                     "Content-Type": "application/x-www-form-urlencoded"
