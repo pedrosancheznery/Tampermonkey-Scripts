@@ -59,6 +59,20 @@
         #tote-error-log-table tbody tr:nth-child(even) {
             background-color: #f2f2f2;
         }
+        .api-url-selector {
+            margin-bottom: 8px;
+            font-size: 10px;
+        }
+        .api-url-selector label {
+            display: flex;
+            align-items: center;
+            margin-bottom: 4px;
+            cursor: pointer;
+        }
+        .api-url-selector input[type="radio"] {
+            margin-right: 6px;
+            cursor: pointer;
+        }
     `);
 
     // Create the container for the new table
@@ -106,6 +120,7 @@
     let toteId, statsEl;
     let successCount = 0;
     let failCount = 0;
+    let selectedApiUrl = "https://qifcr.na.aftx.amazonoperations.app/HOU3/results/container-hierarchy";
 
     // Function to copy textarea content to clipboard
     async function copyToClipboard(textarea) {
@@ -126,8 +141,7 @@
         return new Promise((resolve) => {
             GM.xmlHttpRequest({
                 method: "POST",
-                url: "https://qifcr.na.aftx.amazonoperations.app/HOU3/results/container-hierarchy",
-                //url: "https://qi-fcresearch-na.corp.amazon.com/HOU3/results/container-hierarchy",
+                url: selectedApiUrl,
                 data: `s=${containerId}`,
                 headers: {
                     "Content-Type": "application/x-www-form-urlencoded"
@@ -231,6 +245,42 @@
         containerInput.style.marginBottom = '8px';
         containerInput.style.boxSizing = 'border-box';
         modal.appendChild(containerInput);
+
+        // Add API URL selector
+        const apiUrlSelector = document.createElement('div');
+        apiUrlSelector.className = 'api-url-selector';
+        
+        const urlLabel = document.createElement('div');
+        urlLabel.style = "font-size: 10px; margin-bottom: 4px; font-weight: bold;";
+        urlLabel.innerText = "API Endpoint:";
+        apiUrlSelector.appendChild(urlLabel);
+
+        const label1 = document.createElement('label');
+        const radio1 = document.createElement('input');
+        radio1.type = 'radio';
+        radio1.name = 'apiUrl';
+        radio1.value = 'https://qifcr.na.aftx.amazonoperations.app/HOU3/results/container-hierarchy';
+        radio1.checked = true;
+        radio1.onchange = () => {
+            selectedApiUrl = radio1.value;
+        };
+        label1.appendChild(radio1);
+        label1.appendChild(document.createTextNode('qifcr.na.aftx'));
+        apiUrlSelector.appendChild(label1);
+
+        const label2 = document.createElement('label');
+        const radio2 = document.createElement('input');
+        radio2.type = 'radio';
+        radio2.name = 'apiUrl';
+        radio2.value = 'https://qi-fcresearch-na.corp.amazon.com/HOU3/results/container-hierarchy';
+        radio2.onchange = () => {
+            selectedApiUrl = radio2.value;
+        };
+        label2.appendChild(radio2);
+        label2.appendChild(document.createTextNode('qi-fcresearch-na.corp'));
+        apiUrlSelector.appendChild(label2);
+
+        modal.appendChild(apiUrlSelector);
 
         const containerButton = document.createElement('button');
         containerButton.innerText = "Container";
