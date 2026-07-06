@@ -1,9 +1,12 @@
 // ==UserScript==
 // @name         Automate Kiosk Badge Submission
 // @namespace    HOU3
-// @version      1.0
+// @version      1.1
 // @description  Processes a list of badge IDs one by one through the labor tracking form
 // @author       Pedro Sanchez (pefsanch)
+// @homepage     https://github.com/pedrosancheznery/Tampermonkey-Scripts
+// @downloadURL  https://raw.githubusercontent.com/pedrosancheznery/Tampermonkey-Scripts/main/Automate%20Kiosk%20Badge%20Submission.user.js
+// @updateURL    https://raw.githubusercontent.com/pedrosancheznery/Tampermonkey-Scripts/main/Automate%20Kiosk%20Badge%20Submission.user.js
 // @match        http://*/do/laborTrackingKiosk*
 // @match        https://*/do/laborTrackingKiosk*
 // @grant        none
@@ -12,8 +15,8 @@
 (function() {
     'use strict';
 
-    // 1. PLACE YOUR LIST OF BADGE IDS HERE
-    const BADGES_TO_PROCESS = [
+    // Default list of badge IDs
+    const DEFAULT_BADGES = [
         "11325083",
         "14810336",
         "12725535",
@@ -30,17 +33,13 @@
     // Key names for tracking progress in localStorage
     const STORAGE_KEY_LIST = "kiosk_badges_queue";
     const STORAGE_KEY_ACTIVE = "kiosk_automation_active";
+    const STORAGE_KEY_BADGES = "kiosk_badges_list";
 
     // Locate the form and input fields
     const form = document.querySelector('form[action="/do/laborTrackingKiosk"]');
     const badgeInput = document.getElementById('trackingBadgeId');
 
     if (!form || !badgeInput) return;
-        let tableBody = ""
-        for( const line of BADGES_TO_PROCESS ) {
-            tableBody += `<tr><td>${line}</td></tr>`;
-            console.log(tableBody)
-        };
 
     function movebox() {
         let waitForIt;
@@ -52,7 +51,7 @@
     }
     movebox();
 
-    // Create a simple control UI panel on the screen
+    // Create control UI panels on the screen
     createControlPanel();
     createActiveIdsTable();
     showActiveIds();
@@ -60,6 +59,11 @@
     // Check if automation is currently running
     if (localStorage.getItem(STORAGE_KEY_ACTIVE) === "true") {
         processNextBadge();
+    }
+
+    function getBadgesFromStorage() {
+        const stored = localStorage.getItem(STORAGE_KEY_BADGES);
+        return stored ? JSON.parse(stored) : DEFAULT_BADGES;
     }
 
     function createActiveIdsTable() {
@@ -75,8 +79,6 @@
 
         const table = document.createElement('table');
         table.id = "id-table";
-        //title.innerText = "Automation Control";
-        //title.style.margin = '0 0 10px 0';
         table.innerHTML = "<thead><tr><td>Badge</td><td>Name</td></tr></thead><tbody></tbody>"
 
         panel.appendChild(table);
@@ -95,34 +97,74 @@
         panel.style.border = '2px solid #ccc';
         panel.style.zIndex = '9999';
         panel.style.fontFamily = 'sans-serif';
+        panel.style.maxWidth = '280px';
 
         const title = document.createElement('h4');
         title.innerText = "Automation Control";
         title.style.margin = '0 0 10px 0';
         panel.appendChild(title);
 
-        const table = document.createElement('table');
-        table.id = "id-table";
-        //title.innerText = "Automation Control";
-        //title.style.margin = '0 0 10px 0';
-        table.innerHTML = "<thead><tr><td>Badge</td></tr></thead><tbody>" + tableBody + "</tbody>"
+        // Badge List Textarea
+        const textarea = document.createElement('textarea');
+        textarea.id = 'badge-list-textarea';
+        textarea.style.width = '100%';
+        textarea.style.height = '120px';
+        textarea.style.padding = '5px';
+        textarea.style.fontSize = '12px';
+        textarea.style.fontFamily = 'monospace';
+        textarea.style.marginBottom = '10px';
+        textarea.value = getBadgesFromStorage().join('\n');
+        panel.appendChild(textarea);
 
-        panel.appendChild(table);
+        // Save Button
+        const saveBtn = document.createElement('button');
+        saveBtn.innerText = "Save to Storage";
+        saveBtn.style.marginRight = '5px';
+        saveBtn.style.marginBottom = '5px';
+        saveBtn.onclick = function() {
+            const badgeText = textarea.value.trim();
+            const badgeList = badgeText.split('\n').map(b => b.trim()).filter(b => b.length > 0);
+            if (badgeList.length > 0) {
+                localStorage.setItem(STORAGE_KEY_BADGES, JSON.stringify(badgeList));
+                alert(`Saved ${badgeList.length} badge IDs to storage.`);
+                updateStatusText(`Saved ${badgeList.length} badges.`);
+            } else {
+                alert("Please enter at least one badge ID.");
+            }
+        };
+        panel.appendChild(saveBtn);
 
+        // Clear Button
+        const clearBtn = document.createElement('button');
+        clearBtn.innerText = "Clear Storage";
+        clearBtn.style.marginBottom = '10px';
+        clearBtn.onclick = function() {
+            if (confirm("Are you sure you want to clear the saved badge list?")) {
+                localStorage.removeItem(STORAGE_KEY_BADGES);
+                textarea.value = DEFAULT_BADGES.join('\n');
+                alert("Cleared! Reset to default badges.");
+                updateStatusText("Cleared badge storage.");
+            }
+        };
+        panel.appendChild(clearBtn);
 
         // Status text
         const status = document.createElement('p');
         status.id = 'automation-status';
-        status.style.margin = '0 0 10px 0';
+        status.style.margin = '10px 0 10px 0';
         status.style.fontSize = '12px';
+        status.style.borderTop = '1px solid #ccc';
+        status.style.paddingTop = '10px';
         panel.appendChild(status);
 
         // Start Button
         const startBtn = document.createElement('button');
         startBtn.innerText = "Start Processing";
         startBtn.style.marginRight = '5px';
+        startBtn.style.marginBottom = '5px';
         startBtn.onclick = function() {
-            localStorage.setItem(STORAGE_KEY_LIST, JSON.stringify(BADGES_TO_PROCESS));
+            const badgeList = getBadgesFromStorage();
+            localStorage.setItem(STORAGE_KEY_LIST, JSON.stringify(badgeList));
             localStorage.setItem(STORAGE_KEY_ACTIVE, "true");
             processNextBadge();
         };
@@ -144,11 +186,12 @@
     function updateStatus() {
         const isActive = localStorage.getItem(STORAGE_KEY_ACTIVE) === "true";
         const queue = JSON.parse(localStorage.getItem(STORAGE_KEY_LIST) || "[]");
+        const badgeList = getBadgesFromStorage();
 
         if (isActive) {
             updateStatusText(`Running... Items left in queue: ${queue.length}`);
         } else {
-            updateStatusText(`Idle. Total items ready to load: ${BADGES_TO_PROCESS.length}`);
+            updateStatusText(`Idle. Total items ready to load: ${badgeList.length}`);
         }
     }
 
@@ -193,7 +236,7 @@
         tbodyEl.innerHTML = "";
 
         // If your queue contains objects: { id, name }
-        // If it contains strings/numbers, we’ll treat the value as the id and leave name blank.
+        // If it contains strings/numbers, we'll treat the value as the id and leave name blank.
         for (const item of queue) {
             const badgeId = (item && typeof item === "object") ? item.id : item;
             const badgeName = (item && typeof item === "object") ? (item.name ?? "") : "";
@@ -214,10 +257,7 @@
     }
 
     function waitForAndSaveBadgeId() {
-        //const form = document.querySelector('form[action="/do/laborTrackingKiosk"]');
         if (!form) return;
-
-        //const badgeInput = form.querySelector('#trackingBadgeId, [name="trackingBadgeId"], input[aria-label*="trackingBadgeId"]');
         if (!badgeInput) return;
 
         const getBadgeId = () => (badgeInput.value ?? "").trim();
