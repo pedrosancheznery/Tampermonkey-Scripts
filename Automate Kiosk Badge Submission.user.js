@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Automate Kiosk Badge Submission
 // @namespace    HOU3
-// @version      1.2
+// @version      1.3
 // @description  Processes a list of badge IDs one by one through the labor tracking form
 // @author       Pedro Sanchez (pefsanch)
 // @homepage     https://github.com/pedrosancheznery/Tampermonkey-Scripts
@@ -267,6 +267,10 @@
             // Get all hidden input fields for badge IDs and names
             const trackingIdInputs = form.querySelectorAll('input[name="trackingIdList"]');
             const trackingNameInputs = form.querySelectorAll('input[name="trackingNameList"]');
+            const calmCodeInput = form.querySelector('input[name="calmCode"]');
+
+            // Get the calmCode value
+            const calmCode = calmCodeInput ? calmCodeInput.value : "";
 
             // Get or initialize the submitted badges list
             let submittedBadges = [];
@@ -286,6 +290,7 @@
                     submittedBadges.push({
                         id: badgeId,
                         name: badgeName,
+                        calmCode: calmCode,
                         timestamp: new Date().toISOString()
                     });
                 }
