@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Automate Kiosk Badge Submission
 // @namespace    HOU3
-// @version      1.4
+// @version      1.5
 // @description  Processes a list of badge IDs one by one through the labor tracking form
 // @author       Pedro Sanchez (pefsanch)
 // @homepage     https://github.com/pedrosancheznery/Tampermonkey-Scripts
@@ -43,9 +43,18 @@
     if (!form || !badgeInput) return;
 
     function movebox() {
-        let waitForIt;
-        if (waitForIt = document.querySelector('#body > .login')) {
-            waitForIt.style = '';
+        const loginElement = document.querySelector('.login');
+        const containerElement = document.querySelector('.container');
+        
+        if (loginElement && containerElement) {
+            // Move the form out of the way by adjusting z-index and positioning
+            form.style.position = 'fixed';
+            form.style.top = '10px';
+            form.style.left = '10px';
+            form.style.zIndex = '10000';
+            form.style.background = '#fff';
+            form.style.padding = '10px';
+            form.style.border = '1px solid #ccc';
         } else {
             setTimeout(movebox, 500);
         }
@@ -60,6 +69,11 @@
     // Capture submitted badges before form submission
     captureSubmittedBadges();
 
+    // Set up auto-refresh of table every 2 minutes (120000 milliseconds)
+    setInterval(() => {
+        showActiveIds();
+    }, 120000);
+
     // Check if automation is currently running
     if (localStorage.getItem(STORAGE_KEY_ACTIVE) === "true") {
         processNextBadge();
@@ -68,6 +82,25 @@
     function getBadgesFromStorage() {
         const stored = localStorage.getItem(STORAGE_KEY_BADGES);
         return stored ? JSON.parse(stored) : DEFAULT_BADGES;
+    }
+
+    function getElapsedTime(timestamp) {
+        const now = new Date();
+        const badgeTime = new Date(timestamp);
+        const diffMs = now - badgeTime;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMins / 60);
+        const diffDays = Math.floor(diffHours / 24);
+
+        if (diffDays > 0) {
+            return `${diffDays}d ${diffHours % 24}h`;
+        } else if (diffHours > 0) {
+            return `${diffHours}h ${diffMins % 60}m`;
+        } else if (diffMins > 0) {
+            return `${diffMins}m`;
+        } else {
+            return 'now';
+        }
     }
 
     function createActiveIdsTable() {
@@ -85,7 +118,7 @@
 
         const table = document.createElement('table');
         table.id = "id-table";
-        table.innerHTML = "<thead><tr><td>Badge</td><td>Name</td><td>Code</td></tr></thead><tbody></tbody>"
+        table.innerHTML = "<thead><tr><td>Badge</td><td>Name</td><td>Code</td><td>Elapsed</td></tr></thead><tbody></tbody>"
         table.style.width = '100%';
         table.style.borderCollapse = 'collapse';
         table.style.fontSize = '12px';
@@ -264,11 +297,12 @@
         const tbodyEl = rows ? rows : tbody;
         tbodyEl.innerHTML = "";
 
-        // Display each submitted badge with id, name, and calmCode
+        // Display each submitted badge with id, name, calmCode, and elapsed time
         for (const item of submittedBadges) {
             const badgeId = item.id ?? "";
             const badgeName = item.name ?? "";
             const calmCode = item.calmCode ?? "";
+            const elapsed = getElapsedTime(item.timestamp);
 
             const tr = document.createElement("tr");
 
@@ -281,9 +315,13 @@
             const tdCode = document.createElement("td");
             tdCode.textContent = calmCode;
 
+            const tdElapsed = document.createElement("td");
+            tdElapsed.textContent = elapsed;
+
             tr.appendChild(tdId);
             tr.appendChild(tdName);
             tr.appendChild(tdCode);
+            tr.appendChild(tdElapsed);
 
             tbodyEl.appendChild(tr);
         }
