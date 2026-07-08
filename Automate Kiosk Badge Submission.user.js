@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Automate Kiosk Badge Submission
 // @namespace    HOU3
-// @version      1.1
+// @version      1.2
 // @description  Processes a list of badge IDs one by one through the labor tracking form
 // @author       Pedro Sanchez (pefsanch)
 // @homepage     https://github.com/pedrosancheznery/Tampermonkey-Scripts
@@ -34,6 +34,7 @@
     const STORAGE_KEY_LIST = "kiosk_badges_queue";
     const STORAGE_KEY_ACTIVE = "kiosk_automation_active";
     const STORAGE_KEY_BADGES = "kiosk_badges_list";
+    const STORAGE_KEY_SUBMITTED = "kiosk_submitted_badges";
 
     // Locate the form and input fields
     const form = document.querySelector('form[action="/do/laborTrackingKiosk"]');
@@ -55,6 +56,9 @@
     createControlPanel();
     createActiveIdsTable();
     showActiveIds();
+
+    // Capture submitted badges before form submission
+    captureSubmittedBadges();
 
     // Check if automation is currently running
     if (localStorage.getItem(STORAGE_KEY_ACTIVE) === "true") {
@@ -254,6 +258,43 @@
 
             tbodyEl.appendChild(tr);
         }
+    }
+
+    function captureSubmittedBadges() {
+        if (!form) return;
+
+        form.addEventListener("submit", function(e) {
+            // Get all hidden input fields for badge IDs and names
+            const trackingIdInputs = form.querySelectorAll('input[name="trackingIdList"]');
+            const trackingNameInputs = form.querySelectorAll('input[name="trackingNameList"]');
+
+            // Get or initialize the submitted badges list
+            let submittedBadges = [];
+            const stored = localStorage.getItem(STORAGE_KEY_SUBMITTED);
+            if (stored) {
+                submittedBadges = JSON.parse(stored);
+            }
+
+            // Add each badge and name pair to the list
+            for (let i = 0; i < trackingIdInputs.length; i++) {
+                const badgeId = trackingIdInputs[i].value;
+                const badgeName = trackingNameInputs[i] ? trackingNameInputs[i].value : "";
+
+                // Avoid duplicates
+                const exists = submittedBadges.some(item => item.id === badgeId);
+                if (!exists) {
+                    submittedBadges.push({
+                        id: badgeId,
+                        name: badgeName,
+                        timestamp: new Date().toISOString()
+                    });
+                }
+            }
+
+            // Save back to localStorage
+            localStorage.setItem(STORAGE_KEY_SUBMITTED, JSON.stringify(submittedBadges));
+            console.log("Captured badges:", submittedBadges);
+        }, true);
     }
 
     function waitForAndSaveBadgeId() {
