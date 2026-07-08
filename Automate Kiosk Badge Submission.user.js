@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Automate Kiosk Badge Submission
 // @namespace    HOU3
-// @version      1.3
+// @version      1.4
 // @description  Processes a list of badge IDs one by one through the labor tracking form
 // @author       Pedro Sanchez (pefsanch)
 // @homepage     https://github.com/pedrosancheznery/Tampermonkey-Scripts
@@ -80,10 +80,33 @@
         panel.style.border = '2px solid #ccc';
         panel.style.zIndex = '9999';
         panel.style.fontFamily = 'sans-serif';
+        panel.style.maxHeight = '500px';
+        panel.style.overflowY = 'auto';
 
         const table = document.createElement('table');
         table.id = "id-table";
-        table.innerHTML = "<thead><tr><td>Badge</td><td>Name</td></tr></thead><tbody></tbody>"
+        table.innerHTML = "<thead><tr><td>Badge</td><td>Name</td><td>Code</td></tr></thead><tbody></tbody>"
+        table.style.width = '100%';
+        table.style.borderCollapse = 'collapse';
+        table.style.fontSize = '12px';
+
+        // Add table styling
+        const style = document.createElement('style');
+        style.textContent = `
+            #id-table {
+                width: 100%;
+                border-collapse: collapse;
+            }
+            #id-table td {
+                border: 1px solid #999;
+                padding: 4px;
+            }
+            #id-table thead td {
+                background-color: #ddd;
+                font-weight: bold;
+            }
+        `;
+        document.head.appendChild(style);
 
         panel.appendChild(table);
 
@@ -191,11 +214,12 @@
         const isActive = localStorage.getItem(STORAGE_KEY_ACTIVE) === "true";
         const queue = JSON.parse(localStorage.getItem(STORAGE_KEY_LIST) || "[]");
         const badgeList = getBadgesFromStorage();
+        const submittedBadges = JSON.parse(localStorage.getItem(STORAGE_KEY_SUBMITTED) || "[]");
 
         if (isActive) {
-            updateStatusText(`Running... Items left in queue: ${queue.length}`);
+            updateStatusText(`Running... Items left in queue: ${queue.length} | Submitted: ${submittedBadges.length}`);
         } else {
-            updateStatusText(`Idle. Total items ready to load: ${badgeList.length}`);
+            updateStatusText(`Idle. Total items ready to load: ${badgeList.length} | Submitted: ${submittedBadges.length}`);
         }
     }
 
@@ -229,7 +253,8 @@
     }
 
     function showActiveIds() {
-        const queue = JSON.parse(localStorage.getItem(STORAGE_KEY_LIST) || "[]");
+        // Get submitted badges instead of queue
+        const submittedBadges = JSON.parse(localStorage.getItem(STORAGE_KEY_SUBMITTED) || "[]");
 
         const tbody = document.querySelector("#id-table tbody") || document.querySelector("#id-table");
         if (!tbody) return;
@@ -239,25 +264,31 @@
         const tbodyEl = rows ? rows : tbody;
         tbodyEl.innerHTML = "";
 
-        // If your queue contains objects: { id, name }
-        // If it contains strings/numbers, we'll treat the value as the id and leave name blank.
-        for (const item of queue) {
-            const badgeId = (item && typeof item === "object") ? item.id : item;
-            const badgeName = (item && typeof item === "object") ? (item.name ?? "") : "";
+        // Display each submitted badge with id, name, and calmCode
+        for (const item of submittedBadges) {
+            const badgeId = item.id ?? "";
+            const badgeName = item.name ?? "";
+            const calmCode = item.calmCode ?? "";
 
             const tr = document.createElement("tr");
 
             const tdId = document.createElement("td");
-            tdId.textContent = badgeId ?? "";
+            tdId.textContent = badgeId;
 
             const tdName = document.createElement("td");
             tdName.textContent = badgeName;
 
+            const tdCode = document.createElement("td");
+            tdCode.textContent = calmCode;
+
             tr.appendChild(tdId);
             tr.appendChild(tdName);
+            tr.appendChild(tdCode);
 
             tbodyEl.appendChild(tr);
         }
+
+        updateStatus();
     }
 
     function captureSubmittedBadges() {
@@ -299,6 +330,9 @@
             // Save back to localStorage
             localStorage.setItem(STORAGE_KEY_SUBMITTED, JSON.stringify(submittedBadges));
             console.log("Captured badges:", submittedBadges);
+            
+            // Refresh the table display
+            showActiveIds();
         }, true);
     }
 
