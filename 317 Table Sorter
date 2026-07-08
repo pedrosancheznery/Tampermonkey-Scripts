@@ -1,12 +1,12 @@
 // ==UserScript==
 // @name         317 Table Sorter
 // @namespace    http://tampermonkey.net/
-// @version      1.1
-// @description  Adds sorting functionality to a specific table.
+// @version      1.2
+// @description  Adds sorting functionality to a specific table with improved error handling and accessibility.
 // @author       Pedro Sanchez (pefsanch)
 // @match        https://wd-repair-portal-na.aka.amazon.com/resources/ReCommerceFCWebToolsUI/html/listTote.html
 // @homepage     https://github.com/pedrosancheznery/Tampermonkey-Scripts/
-// downloadURL   https://raw.githubusercontent.com/pedrosancheznery/Tampermonkey-Scripts/main/317%20Table%20Sorter.user.js
+// @downloadURL  https://raw.githubusercontent.com/pedrosancheznery/Tampermonkey-Scripts/main/317%20Table%20Sorter.user.js
 // @updateURL    https://raw.githubusercontent.com/pedrosancheznery/Tampermonkey-Scripts/main/317%20Table%20Sorter.user.js
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=amazon.com
 // @grant        none
@@ -21,37 +21,85 @@
     const tableSelector = 'table#item-details-table';
     // ---------------------
 
+    let isSorting = false;
+
     const setupSorting = () => {
         const table = document.querySelector(tableSelector);
-        if (!table) return;
+        if (!table) {
+            console.warn(`[317 Table Sorter] Table not found with selector: ${tableSelector}`);
+            return;
+        }
+
+        // Skip if already initialized
+        if (table.hasAttribute('data-sorting-initialized')) {
+            return;
+        }
 
         const headers = table.querySelectorAll('th');
-        if (headers.length === 0) return;
+        if (headers.length === 0) {
+            console.warn(`[317 Table Sorter] No table headers found in ${tableSelector}`);
+            return;
+        }
 
         headers.forEach((header, index) => {
             header.style.cursor = 'pointer';
-            header.addEventListener('click', () => {
+            header.setAttribute('role', 'button');
+            header.setAttribute('tabindex', '0');
+            header.setAttribute('aria-sort', 'none');
+
+            const clickHandler = () => {
+                if (isSorting) return; // Prevent multiple simultaneous sorts
+                
+                isSorting = true;
+                
                 const isAscending = header.dataset.sortOrder === 'asc';
                 sortTable(table, index, !isAscending);
 
                 // Reset other headers
-                headers.forEach(h => h.classList.remove('sorted-asc', 'sorted-desc'));
+                headers.forEach(h => {
+                    h.classList.remove('sorted-asc', 'sorted-desc');
+                    h.setAttribute('aria-sort', 'none');
+                });
 
                 // Set indicator on the clicked header
+                const newOrder = isAscending ? 'desc' : 'asc';
                 header.classList.add(isAscending ? 'sorted-desc' : 'sorted-asc');
-                header.dataset.sortOrder = isAscending ? 'desc' : 'asc';
+                header.dataset.sortOrder = newOrder;
+                header.setAttribute('aria-sort', newOrder);
+
+                isSorting = false;
+            };
+
+            header.addEventListener('click', clickHandler);
+            
+            // Add keyboard accessibility
+            header.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    clickHandler();
+                }
             });
         });
+
+        table.setAttribute('data-sorting-initialized', 'true');
     };
 
     const sortTable = (table, columnIndex, isAscending) => {
         const tbody = table.querySelector('tbody');
+        if (!tbody) {
+            console.warn(`[317 Table Sorter] No tbody found in table`);
+            return;
+        }
+
         const rows = Array.from(tbody.querySelectorAll('tr'));
+        if (rows.length === 0) {
+            return;
+        }
 
         // Sort the rows based on the column content
         rows.sort((rowA, rowB) => {
-            const cellA = rowA.cells[columnIndex].innerText.toLowerCase();
-            const cellB = rowB.cells[columnIndex].innerText.toLowerCase();
+            const cellA = rowA.cells[columnIndex]?.innerText?.toLowerCase().trim() || '';
+            const cellB = rowB.cells[columnIndex]?.innerText?.toLowerCase().trim() || '';
 
             // Handle numeric values
             const numA = parseFloat(cellA);
@@ -72,11 +120,30 @@
         rows.forEach(row => tbody.appendChild(row));
     };
 
-    // Add some basic visual style for sort direction
+    // Add visual style for sort direction with better accessibility
     const style = document.createElement('style');
     style.textContent = `
-        th.sorted-asc::after { content: ' ▲'; }
-        th.sorted-desc::after { content: ' ▼'; }
+        th[role="button"] {
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        th[role="button"]:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+        th[role="button"]:focus {
+            outline: 2px solid #0066cc;
+            outline-offset: -2px;
+        }
+        th.sorted-asc::after { 
+            content: ' ▲'; 
+            color: #0066cc;
+            font-weight: bold;
+        }
+        th.sorted-desc::after { 
+            content: ' ▼'; 
+            color: #0066cc;
+            font-weight: bold;
+        }
     `;
     document.head.appendChild(style);
 
@@ -85,7 +152,7 @@
     const observer = new MutationObserver((mutations, obs) => {
         const table = document.querySelector(tableSelector);
         if (table) {
-            //console.info(`Table found...`);
+            console.info(`[317 Table Sorter] Table found, initializing sorting...`);
             setupSorting();
             obs.disconnect(); // Stop observing once the table is found
         }
@@ -95,4 +162,8 @@
         childList: true,
         subtree: true
     });
+
+    // Also try to set up immediately in case table is already loaded
+    document.addEventListener('DOMContentLoaded', setupSorting);
+    setupSorting();
 })();
