@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Automate Kiosk Badge Submission
 // @namespace    HOU3
-// @version      1.5
+// @version      1.6
 // @description  Processes a list of badge IDs one by one through the labor tracking form
 // @author       Pedro Sanchez (pefsanch)
 // @homepage     https://github.com/pedrosancheznery/Tampermonkey-Scripts
@@ -35,6 +35,9 @@
     const STORAGE_KEY_ACTIVE = "kiosk_automation_active";
     const STORAGE_KEY_BADGES = "kiosk_badges_list";
     const STORAGE_KEY_SUBMITTED = "kiosk_submitted_badges";
+
+    // Calm codes to filter out
+    const FILTERED_CALM_CODES = ["ISTOP", "MSTOP"];
 
     // Locate the form and input fields
     const form = document.querySelector('form[action="/do/laborTrackingKiosk"]');
@@ -340,6 +343,27 @@
 
             // Get the calmCode value
             const calmCode = calmCodeInput ? calmCodeInput.value : "";
+
+            // Check if this calm code should be filtered out
+            if (FILTERED_CALM_CODES.includes(calmCode)) {
+                // Get submitted badges and remove any entries with ISTOP or MSTOP calm codes
+                let submittedBadges = [];
+                const stored = localStorage.getItem(STORAGE_KEY_SUBMITTED);
+                if (stored) {
+                    submittedBadges = JSON.parse(stored);
+                }
+
+                // Filter out badges with ISTOP or MSTOP calm codes
+                submittedBadges = submittedBadges.filter(item => !FILTERED_CALM_CODES.includes(item.calmCode));
+
+                // Save the filtered list back to localStorage
+                localStorage.setItem(STORAGE_KEY_SUBMITTED, JSON.stringify(submittedBadges));
+                console.log(`Filtered out badges with calm code: ${calmCode}`);
+
+                // Refresh the table display
+                showActiveIds();
+                return; // Don't add any badges for filtered calm codes
+            }
 
             // Get or initialize the submitted badges list
             let submittedBadges = [];
