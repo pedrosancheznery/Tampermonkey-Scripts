@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Automate Kiosk Badge Submission
 // @namespace    HOU3
-// @version      1.6
+// @version      1.7
 // @description  Processes a list of badge IDs one by one through the labor tracking form
 // @author       Pedro Sanchez (pefsanch)
 // @homepage     https://github.com/pedrosancheznery/Tampermonkey-Scripts
@@ -44,25 +44,6 @@
     const badgeInput = document.getElementById('trackingBadgeId');
 
     if (!form || !badgeInput) return;
-
-    function movebox() {
-        const loginElement = document.querySelector('.login');
-        const containerElement = document.querySelector('.container');
-        
-        if (loginElement && containerElement) {
-            // Move the form out of the way by adjusting z-index and positioning
-            form.style.position = 'fixed';
-            form.style.top = '10px';
-            form.style.left = '10px';
-            form.style.zIndex = '10000';
-            form.style.background = '#fff';
-            form.style.padding = '10px';
-            form.style.border = '1px solid #ccc';
-        } else {
-            setTimeout(movebox, 500);
-        }
-    }
-    movebox();
 
     // Create control UI panels on the screen
     createControlPanel();
@@ -110,7 +91,7 @@
         const panel = document.createElement('div');
         panel.style.position = 'fixed';
         panel.style.top = '100px';
-        panel.style.right = '300px';
+        panel.style.left = '10px';
         panel.style.padding = '15px';
         panel.style.background = '#f0f0f0';
         panel.style.border = '2px solid #ccc';
@@ -118,6 +99,7 @@
         panel.style.fontFamily = 'sans-serif';
         panel.style.maxHeight = '500px';
         panel.style.overflowY = 'auto';
+        panel.style.maxWidth = '400px';
 
         const table = document.createElement('table');
         table.id = "id-table";
@@ -154,7 +136,7 @@
         const panel = document.createElement('div');
         panel.style.position = 'fixed';
         panel.style.top = '100px';
-        panel.style.right = '10px';
+        panel.style.left = '420px';
         panel.style.padding = '15px';
         panel.style.background = '#f0f0f0';
         panel.style.border = '2px solid #ccc';
@@ -336,12 +318,8 @@
         if (!form) return;
 
         form.addEventListener("submit", function(e) {
-            // Get all hidden input fields for badge IDs and names
-            const trackingIdInputs = form.querySelectorAll('input[name="trackingIdList"]');
-            const trackingNameInputs = form.querySelectorAll('input[name="trackingNameList"]');
+            // Get the calmCode value first
             const calmCodeInput = form.querySelector('input[name="calmCode"]');
-
-            // Get the calmCode value
             const calmCode = calmCodeInput ? calmCodeInput.value : "";
 
             // Check if this calm code should be filtered out
@@ -361,9 +339,13 @@
                 console.log(`Filtered out badges with calm code: ${calmCode}`);
 
                 // Refresh the table display
-                showActiveIds();
+                setTimeout(() => showActiveIds(), 100);
                 return; // Don't add any badges for filtered calm codes
             }
+
+            // Get all hidden input fields for badge IDs and names
+            const trackingIdInputs = form.querySelectorAll('input[name="trackingIdList"]');
+            const trackingNameInputs = form.querySelectorAll('input[name="trackingNameList"]');
 
             // Get or initialize the submitted badges list
             let submittedBadges = [];
@@ -394,8 +376,8 @@
             console.log("Captured badges:", submittedBadges);
             
             // Refresh the table display
-            showActiveIds();
-        }, true);
+            setTimeout(() => showActiveIds(), 100);
+        });
     }
 
     function waitForAndSaveBadgeId() {
@@ -417,7 +399,7 @@
             showActiveIds();
         };
 
-        form.addEventListener("submit", onSubmit, true);
+        form.addEventListener("submit", onSubmit);
     }
 
 
