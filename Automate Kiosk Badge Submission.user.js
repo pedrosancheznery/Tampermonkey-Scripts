@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Automate Kiosk Badge Submission
 // @namespace    HOU3
-// @version      1.7
+// @version      1.8
 // @description  Processes a list of badge IDs one by one through the labor tracking form
 // @author       Pedro Sanchez (pefsanch)
 // @homepage     https://github.com/pedrosancheznery/Tampermonkey-Scripts
@@ -212,16 +212,16 @@
             const calmCodeInput = form.querySelector('input[name="calmCode"]');
             const calmCode = calmCodeInput ? calmCodeInput.value : "";
 
+            // Get or initialize the submitted badges list first
+            let submittedBadges = [];
+            const stored = localStorage.getItem(STORAGE_KEY_SUBMITTED);
+            if (stored) {
+                submittedBadges = JSON.parse(stored);
+            }
+
             // Check if this calm code should be filtered out
             if (FILTERED_CALM_CODES.includes(calmCode)) {
-                // Get submitted badges and remove any entries with ISTOP or MSTOP calm codes
-                let submittedBadges = [];
-                const stored = localStorage.getItem(STORAGE_KEY_SUBMITTED);
-                if (stored) {
-                    submittedBadges = JSON.parse(stored);
-                }
-
-                // Filter out badges with ISTOP or MSTOP calm codes
+                // Filter out ALL badges with ISTOP or MSTOP calm codes
                 submittedBadges = submittedBadges.filter(item => !FILTERED_CALM_CODES.includes(item.calmCode));
 
                 // Save the filtered list back to localStorage
@@ -236,13 +236,6 @@
             // Get all hidden input fields for badge IDs and names
             const trackingIdInputs = form.querySelectorAll('input[name="trackingIdList"]');
             const trackingNameInputs = form.querySelectorAll('input[name="trackingNameList"]');
-
-            // Get or initialize the submitted badges list
-            let submittedBadges = [];
-            const stored = localStorage.getItem(STORAGE_KEY_SUBMITTED);
-            if (stored) {
-                submittedBadges = JSON.parse(stored);
-            }
 
             // Add each badge and name pair to the list
             for (let i = 0; i < trackingIdInputs.length; i++) {
