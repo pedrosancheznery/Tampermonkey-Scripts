@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Automate Kiosk Badge Submission
 // @namespace    HOU3
-// @version      1.8
+// @version      1.9
 // @description  Processes a list of badge IDs one by one through the labor tracking form
 // @author       Pedro Sanchez (pefsanch)
 // @homepage     https://github.com/pedrosancheznery/Tampermonkey-Scripts
@@ -31,7 +31,7 @@
     if (!form || !badgeInput) return;
 
     // Create control UI panels on the screen
-    //createControlPanel();
+    createControlPanel();
     createActiveIdsTable();
     showActiveIds();
 
@@ -117,6 +117,98 @@
         updateStatus();
     }
 
+    function createControlPanel() {
+        const panel = document.createElement('div');
+        panel.style.position = 'fixed';
+        panel.style.top = '100px';
+        panel.style.left = '420px';
+        panel.style.padding = '15px';
+        panel.style.background = '#f0f0f0';
+        panel.style.border = '2px solid #ccc';
+        panel.style.zIndex = '9999';
+        panel.style.fontFamily = 'sans-serif';
+        panel.style.maxWidth = '280px';
+
+        const title = document.createElement('h4');
+        title.innerText = "Automation Control";
+        title.style.margin = '0 0 10px 0';
+        panel.appendChild(title);
+
+        // Status text
+        const status = document.createElement('p');
+        status.id = 'automation-status';
+        status.style.margin = '10px 0 10px 0';
+        status.style.fontSize = '12px';
+        status.style.borderTop = '1px solid #ccc';
+        status.style.paddingTop = '10px';
+        panel.appendChild(status);
+
+        // Start Button
+        const startBtn = document.createElement('button');
+        startBtn.innerText = "Start Processing";
+        startBtn.style.marginRight = '5px';
+        startBtn.style.marginBottom = '5px';
+        startBtn.onclick = function() {
+            const badgeList = getBadgesFromStorage();
+            localStorage.setItem(STORAGE_KEY_LIST, JSON.stringify(badgeList));
+            localStorage.setItem(STORAGE_KEY_ACTIVE, "true");
+            processNextBadge();
+        };
+        panel.appendChild(startBtn);
+
+        // Stop Button
+        const stopBtn = document.createElement('button');
+        stopBtn.innerText = "Stop";
+        stopBtn.style.marginBottom = '10px';
+        stopBtn.onclick = function() {
+            localStorage.setItem(STORAGE_KEY_ACTIVE, "false");
+            updateStatusText("Stopped.");
+        };
+        panel.appendChild(stopBtn);
+
+        // Process All Button
+        const processAllBtn = document.createElement('button');
+        processAllBtn.innerText = "Process All";
+        processAllBtn.style.marginRight = '5px';
+        processAllBtn.style.marginBottom = '5px';
+        processAllBtn.style.background = '#4CAF50';
+        processAllBtn.style.color = 'white';
+        processAllBtn.style.fontWeight = 'bold';
+        processAllBtn.onclick = function() {
+            const submittedBadges = JSON.parse(localStorage.getItem(STORAGE_KEY_SUBMITTED) || "[]");
+            if (submittedBadges.length === 0) {
+                alert("No badges in storage to process.");
+                return;
+            }
+            
+            // Extract just the badge IDs from the submitted badges
+            const badgeIds = submittedBadges.map(item => item.id);
+            
+            // Set up the queue and start processing
+            localStorage.setItem(STORAGE_KEY_LIST, JSON.stringify(badgeIds));
+            localStorage.setItem(STORAGE_KEY_ACTIVE, "true");
+            updateStatusText(`Processing ${badgeIds.length} badges from storage...`);
+            processNextBadge();
+        };
+        panel.appendChild(processAllBtn);
+
+        // Clear Submitted Button
+        const clearSubmittedBtn = document.createElement('button');
+        clearSubmittedBtn.innerText = "Clear Submitted";
+        clearSubmittedBtn.style.marginBottom = '10px';
+        clearSubmittedBtn.onclick = function() {
+            if (confirm("Are you sure you want to clear all submitted badges?")) {
+                localStorage.removeItem(STORAGE_KEY_SUBMITTED);
+                showActiveIds();
+                alert("Cleared all submitted badges.");
+                updateStatusText("Cleared submitted badges.");
+            }
+        };
+        panel.appendChild(clearSubmittedBtn);
+
+        document.body.appendChild(panel);
+        updateStatus();
+    }
 
     function updateStatus() {
         const isActive = localStorage.getItem(STORAGE_KEY_ACTIVE) === "true";
@@ -127,7 +219,7 @@
         if (isActive) {
             updateStatusText(`Running... Items left in queue: ${queue.length} | Submitted: ${submittedBadges.length}`);
         } else {
-            updateStatusText(`Idle. Total items ready to load: ${badgeList.length} | Submitted: ${submittedBadges.length}`);
+            updateStatusText(`Idle. Total items in storage: ${badgeList.length} | Submitted: ${submittedBadges.length}`);
         }
     }
 
