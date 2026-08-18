@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Submit Scannable IDs in FROST
 // @namespace    HOU3
-// @version      1.1.21
+// @version      1.1.22
 // @author       Pedro Sanchez (pefsanch)
 // @description  Read scannable IDs from user input and submit them to a form
 // @match        https://frost-prod-jlb-iad.iad.proxy.amazon.com/packnhold/create
@@ -354,6 +354,7 @@
     }
 
     function clearContents() {
+        document.getElementById("containerIdInput").value = "";
         document.getElementById("scannableIdsInput").value = "";
         document.getElementById("tote-error-log-table-body").innerHTML = "";
         successCount = 0 ;
