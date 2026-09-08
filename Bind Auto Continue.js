@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bind Auto Continue (headless)
 // @namespace    HOU3
-// @version      1.0.4
+// @version      1.0.5
 // @description  Headless: wait for bind confirmation modal, hit 'C' via window.aft.scan, wait for it to dismiss, loop.
 // @author       Pedro Sanchez (pefsanch)
 // @match        https://tx-b-hierarchy-iad.iad.proxy.amazon.com/bindHierarchy
@@ -29,7 +29,7 @@
             let resolved = false;
 
             function check() {
-                const msg = document.querySelector('.modal-message');
+                const msg = document.querySelector('.modal-instruction');
                 if (msg) {
                     const txt = (msg.innerText || '').trim();
                     if (txt.includes(CONFIRM_PHRASE)) return true;
