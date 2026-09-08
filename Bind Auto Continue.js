@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Bind Auto Continue (headless) + A-to-switch + Config
 // @namespace    HOU3
-// @version      1.0.7
-// @description  Headless: wait for bind confirmation modal, allow pressing 'A' to switch destinations, otherwise hit 'C' via window.aft.scan, wait for it to dismiss, loop. Adds configurable wait and pause option (UI + hotkey P).
+// @version      1.0.8
+// @description  Headless: wait for bind confirmation modal, allow pressing 'A' to switch destinations (even before modal), otherwise hit 'C' via window.aft.scan, wait for it to dismiss, loop. Adds configurable wait and pause option (UI + hotkey P).
 // @author       Pedro Sanchez (pefsanch) (modified)
 // @match        https://tx-b-hierarchy-iad.iad.proxy.amazon.com/bindHierarchy
 // @match        https://tx-b-hierarchy.na.aftx.amazonoperations.app/bindHierarchy
@@ -23,9 +23,14 @@
     // LocalStorage keys for persistence
     const LS_KEY_WAIT = 'bindAuto_wait_ms';
     const LS_KEY_PAUSED = 'bindAuto_paused';
+    const LS_KEY_PRE_SWITCH = 'bindAuto_preSwitch_ms';
 
     // Default values
     const DEFAULT_WAIT_MS = 800;
+    const DEFAULT_PRE_SWITCH_MS = 2000; // how long a prior 'A' press should be considered recent
+
+    // Track last user-initiated A press time
+    let lastUserSwitchAt = 0;
 
     // Short helper
     function sleep(ms) { return new Promise((res) => setTimeout(res, ms)); }
@@ -34,18 +39,23 @@
     function getConfig() {
         const wait = parseInt(localStorage.getItem(LS_KEY_WAIT), 10);
         const paused = localStorage.getItem(LS_KEY_PAUSED) === '1';
+        const preSwitch = parseInt(localStorage.getItem(LS_KEY_PRE_SWITCH), 10);
         return {
             waitMs: Number.isFinite(wait) && wait > 0 ? wait : DEFAULT_WAIT_MS,
             paused: !!paused,
+            preSwitchMs: Number.isFinite(preSwitch) && preSwitch > 0 ? preSwitch : DEFAULT_PRE_SWITCH_MS,
         };
     }
 
-    function setConfig({ waitMs, paused }) {
+    function setConfig({ waitMs, paused, preSwitchMs }) {
         if (typeof waitMs === 'number' && Number.isFinite(waitMs) && waitMs > 0) {
             localStorage.setItem(LS_KEY_WAIT, String(Math.max(50, Math.round(waitMs))));
         }
         if (typeof paused === 'boolean') {
             localStorage.setItem(LS_KEY_PAUSED, paused ? '1' : '0');
+        }
+        if (typeof preSwitchMs === 'number' && Number.isFinite(preSwitchMs) && preSwitchMs > 0) {
+            localStorage.setItem(LS_KEY_PRE_SWITCH, String(Math.max(100, Math.round(preSwitchMs))));
         }
         updateControlUI();
     }
@@ -67,28 +77,33 @@
         wrapper.style.fontFamily = 'sans-serif';
         wrapper.style.fontSize = '12px';
         wrapper.style.boxShadow = '0 2px 8px rgba(0,0,0,0.5)';
-        wrapper.style.minWidth = '180px';
+        wrapper.style.minWidth = '220px';
 
         wrapper.innerHTML = `
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
                 <strong style="font-size:12px">Bind Auto</strong>
-                <span id="bind-auto-version" style="opacity:0.8;font-size:11px">v1.0.7</span>
+                <span id="bind-auto-version" style="opacity:0.8;font-size:11px">v1.0.8</span>
             </div>
             <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
-                <label for="bind-auto-wait" style="font-size:11px;opacity:0.9;">Wait (ms)</label>
+                <label for="bind-auto-wait" style="font-size:11px;opacity:0.9;min-width:60px;">Wait (ms)</label>
                 <input id="bind-auto-wait" type="number" min="50" step="50" style="flex:1;padding:4px;border-radius:4px;border:1px solid #444;background:#222;color:#fff;font-size:12px;" />
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+                <label for="bind-auto-preswitch" style="font-size:11px;opacity:0.9;min-width:60px;">A-window (ms)</label>
+                <input id="bind-auto-preswitch" type="number" min="100" step="100" style="flex:1;padding:4px;border-radius:4px;border:1px solid #444;background:#222;color:#fff;font-size:12px;" />
             </div>
             <div style="display:flex;gap:6px;align-items:center;justify-content:space-between;">
                 <button id="bind-auto-toggle" style="flex:1;padding:6px;border-radius:4px;border:0;background:#1a73e8;color:white;cursor:pointer;">Pause</button>
                 <button id="bind-auto-reset" title="Reset to defaults" style="margin-left:6px;padding:6px;border-radius:4px;border:0;background:#333;color:#ddd;cursor:pointer;">Reset</button>
             </div>
-            <div id="bind-auto-hint" style="margin-top:6px;font-size:11px;opacity:0.8">Hotkey: <strong>P</strong> pause/resume • Press <strong>A</strong> while modal is present to switch destination</div>
+            <div id="bind-auto-hint" style="margin-top:6px;font-size:11px;opacity:0.8">Hotkey: <strong>P</strong> pause/resume • Press <strong>A</strong> to switch destination (can be pressed before modal)</div>
         `;
 
         document.body.appendChild(wrapper);
 
         // Wire up controls
         const waitInput = document.getElementById('bind-auto-wait');
+        const preSwitchInput = document.getElementById('bind-auto-preswitch');
         const toggleBtn = document.getElementById('bind-auto-toggle');
         const resetBtn = document.getElementById('bind-auto-reset');
 
@@ -102,6 +117,15 @@
             }
         });
 
+        preSwitchInput.addEventListener('change', () => {
+            const v = parseInt(preSwitchInput.value, 10);
+            if (Number.isFinite(v) && v >= 100) {
+                setConfig({ preSwitchMs: v });
+            } else {
+                updateControlUI();
+            }
+        });
+
         toggleBtn.addEventListener('click', () => {
             const cfg = getConfig();
             setConfig({ paused: !cfg.paused });
@@ -110,6 +134,7 @@
         resetBtn.addEventListener('click', () => {
             localStorage.removeItem(LS_KEY_WAIT);
             localStorage.removeItem(LS_KEY_PAUSED);
+            localStorage.removeItem(LS_KEY_PRE_SWITCH);
             updateControlUI();
         });
 
@@ -119,8 +144,10 @@
     function updateControlUI() {
         const cfg = getConfig();
         const waitInput = document.getElementById('bind-auto-wait');
+        const preSwitchInput = document.getElementById('bind-auto-preswitch');
         const toggleBtn = document.getElementById('bind-auto-toggle');
         if (waitInput) waitInput.value = String(cfg.waitMs);
+        if (preSwitchInput) preSwitchInput.value = String(cfg.preSwitchMs);
         if (toggleBtn) {
             toggleBtn.textContent = cfg.paused ? 'Resume' : 'Pause';
             toggleBtn.style.background = cfg.paused ? '#0f9d58' : '#1a73e8';
@@ -252,6 +279,7 @@
                 if (key === 'a') {
                     // Attempt to switch destination
                     aPressed = true;
+                    lastUserSwitchAt = Date.now();
                     if (window.aft && typeof window.aft.scan === 'function') {
                         try {
                             window.aft.scan('A');
@@ -275,6 +303,30 @@
         window.removeEventListener('keydown', onKey, false);
 
         return aPressed;
+    }
+
+    // Global A listener so pressing A before the modal will switch destinations and be honored
+    function setupGlobalAListener() {
+        window.addEventListener('keydown', (e) => {
+            try {
+                const key = (e.key || '').toLowerCase();
+                if (key === 'a') {
+                    lastUserSwitchAt = Date.now();
+                    if (window.aft && typeof window.aft.scan === 'function') {
+                        try {
+                            window.aft.scan('A');
+                            console.info('Bind Auto Continue: global A -> window.aft.scan("A")');
+                        } catch (err) {
+                            console.warn('Bind Auto Continue: window.aft.scan("A") threw', err);
+                        }
+                    } else {
+                        console.warn('Bind Auto Continue: global A pressed but window.aft.scan not available');
+                    }
+                }
+            } catch (err) {
+                // ignore
+            }
+        }, false);
     }
 
     // Hotkey: P to toggle pause/resume at any time
@@ -330,10 +382,20 @@
             }
 
             // read current wait value (configurable)
-            const waitMs = getConfig().waitMs;
+            const waitMs = cfg.waitMs;
 
-            // give user a short chance to press 'A' to switch destinations
-            const userSwitched = await waitForUserSwitchOrConfirm(waitMs);
+            // If the user pressed A shortly before the modal appeared, treat that as a manual switch
+            const preSwitchWindow = cfg.preSwitchMs;
+            const recentlySwitched = lastUserSwitchAt && (Date.now() - lastUserSwitchAt) <= preSwitchWindow;
+            if (recentlySwitched) {
+                console.info('Bind Auto Continue: recent A press detected before modal; skipping auto-confirm for this modal');
+            }
+
+            // give user a short chance to press 'A' to switch destinations if not already done recently
+            let userSwitched = recentlySwitched;
+            if (!userSwitched) {
+                userSwitched = await waitForUserSwitchOrConfirm(waitMs);
+            }
 
             if (!userSwitched) {
                 // no 'A' detected, send confirm via window.aft.scan (with retries)
@@ -357,6 +419,7 @@
             try {
                 createControlUI();
                 setupHotkeys();
+                setupGlobalAListener();
             } catch (err) {
                 // ignore UI errors
                 console.error('Bind Auto Continue UI init error:', err);
