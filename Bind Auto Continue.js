@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Bind Auto Continue (headless)
 // @namespace    HOU3
-// @version      1.0.3
-// @description  Headless: wait for bind confirmation modal, hit 'C', wait for it to dismiss, loop.
+// @version      1.0.4
+// @description  Headless: wait for bind confirmation modal, hit 'C' via window.aft.scan, wait for it to dismiss, loop.
 // @author       Pedro Sanchez (pefsanch)
 // @match        https://tx-b-hierarchy-iad.iad.proxy.amazon.com/bindHierarchy
 // @match        https://tx-b-hierarchy.na.aftx.amazonoperations.app/bindHierarchy
@@ -104,24 +104,37 @@
         });
     }
 
-    // Press 'C' using window.aft.scan if available, otherwise dispatch a key event as fallback.
-    function sendConfirm() {
-        try {
-            if (window.aft && typeof window.aft.scan === 'function') {
-                window.aft.scan('C');
-                return;
+    // Press 'C' using window.aft.scan and retry for a short window if aft isn't ready yet.
+    // This intentionally prefers aft.scan only (per user request).
+    async function sendConfirm() {
+        const MAX_WAIT = 3000; // ms
+        const INTERVAL = 100; // ms
+        const start = Date.now();
+
+        while (true) {
+            try {
+                if (window.aft && typeof window.aft.scan === 'function') {
+                    try {
+                        window.aft.scan('C');
+                        console.info('Bind Auto Continue: called window.aft.scan("C")');
+                        return true;
+                    } catch (inner) {
+                        console.warn('Bind Auto Continue: window.aft.scan threw', inner);
+                        return false;
+                    }
+                }
+            } catch (e) {
+                // ignore and retry
             }
-        } catch (e) {
-            // ignore and fall through to key event
+
+            if (Date.now() - start >= MAX_WAIT) break;
+            // wait and retry
+            // eslint-disable-next-line no-await-in-loop
+            await sleep(INTERVAL);
         }
 
-        try {
-            const ev = new KeyboardEvent('keydown', { key: 'c', code: 'KeyC', keyCode: 67, bubbles: true });
-            document.dispatchEvent(ev);
-        } catch (e) {
-            // best effort only
-            console.warn('Bind Auto Continue: could not send confirm key', e);
-        }
+        console.warn('Bind Auto Continue: window.aft.scan not available after waiting', { waitedMs: Date.now() - start });
+        return false;
     }
 
     // Main loop: wait for confirmation -> confirm -> wait for modal to disappear -> repeat
@@ -137,8 +150,8 @@
                 continue;
             }
 
-            // send confirm
-            sendConfirm();
+            // send confirm via window.aft.scan (with retries)
+            await sendConfirm();
 
             // wait for modal to go away (or timeout)
             await waitForModalGone(10000);
