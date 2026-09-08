@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bind Auto Continue
 // @namespace    HOU3
-// @version      1.0.1
+// @version      1.0.2
 // @description  Automate binding by processing a list of IDs via the Bind tool logic; logs unprocessed totes and continues on error modals
 // @author       Pedro Sanchez (pefsanch)
 // @match        https://tx-b-hierarchy-iad.iad.proxy.amazon.com/bindHierarchy
@@ -20,7 +20,6 @@
     let statsEl;
     let successCount = 0;
     let failCount = 0;
-    let toteId = "";
 
     function output(txt, extra) {
         console.log(`%c%s`, "font-weight:bold;color:light-blue;font-size: 12px;", txt, extra);
@@ -28,10 +27,9 @@
 
     // --- UI creation ---
     function createUI() {
-        // Container
         const container = document.createElement('div');
         container.id = 'tm-pnp-automation';
-        container.style = "position: fixed; bottom: 50px; left: 10px; z-index: 9999; background: white; border: 2px solid #232f3e; padding: 10px; border-radius: 4px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 300px; font-family: Arial, sans-serif; font-size: 13px;";
+        container.style = "position: fixed; bottom: 50px; left: 10px; z-index: 9999; background: white; border: 2px solid #232f3e; padding: 10px; border-radius: 4px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);";
 
         // IDs textarea
         const label1 = document.createElement('label');
@@ -46,12 +44,11 @@
         const delayWrapper = document.createElement('div');
         delayWrapper.style = "display:flex;gap:8px;align-items:center;margin-bottom:8px;";
         const delayCheckbox = document.createElement('input');
-
         delayCheckbox.type = 'checkbox';
         delayCheckbox.id = 'delay-enable-checkbox';
         delayCheckbox.title = 'Enable delay between items';
+        
         const delayLabel = document.createElement('label');
-
         delayLabel.htmlFor = 'delay-enable-checkbox';
         delayLabel.innerText = 'Delay (s):';
         delayLabel.style = "font-weight: bold;";
@@ -62,6 +59,7 @@
         delaySecondsInput.min = '0';
         delaySecondsInput.value = '1';
         delaySecondsInput.style = "width: 60px; padding:4px; box-sizing:border-box;";
+        
         delayWrapper.appendChild(delayCheckbox);
         delayWrapper.appendChild(delayLabel);
         delayWrapper.appendChild(delaySecondsInput);
@@ -82,21 +80,23 @@
         statusDiv.innerText = "Ready";
         statusDiv.style = "margin-top: 8px; font-size: 12px; color: #555; font-weight: bold;";
 
-        // Unprocessed Totes heading + table
+        // Unprocessed Totes
         const unprocessedDiv = document.createElement('div');
         unprocessedDiv.id = "unprocessed-div";
-        unprocessedDiv.style = "background:white;border:2px solid rgb(35, 47, 62);border-radius:4px;box-shadow:rgba(0, 0, 0, 0.1) 0px 4px 6px;font-family:Arial, sans-serif;font-size:13px;height:465px;position:fixed;bottom:50px;left:310px;margin-top:10px;overflow-y:auto;font-weight:bold;width:300px;display:none;";
+        unprocessedDiv.style = "position:fixed;top:50px;right:10px;background:white;border:2px solid rgb(35, 47, 62);border-radius:4px;box-shadow:rgba(0, 0, 0, 0.1) 0px 4px 6px;font-family:Arial, sans-serif;font-size:13px;width:400px;max-height:500px;padding:10px;z-index:9998;display:none;overflow-y:auto;";
+        
         const unprocessedHeading = document.createElement('div');
         unprocessedHeading.id = "unprocessed-heading";
         unprocessedHeading.innerText = "Unprocessed Totes";
-        //unprocessedHeading.style = "margin-top:10px;font-weight:bold;";
-        const unprocessedTableDiv = document.createElement('div');
-        unprocessedTableDiv.id = "unprocessed-table-div";
-        //unprocessedTableDiv.style = "max-height: 250px; overflow-y: auto";
+        unprocessedHeading.style = "font-weight:bold;margin-bottom:10px;";
+        
         const unprocessedTable = document.createElement('table');
         unprocessedTable.id = "unprocessed-totes-table";
-        unprocessedTable.style = "width:100%;border-collapse:collapse;margin-top:6px;font-size:12px;border:1px solid #ddd;";
-        unprocessedTable.innerHTML = '<thead><tr><th style="border:1px solid #ddd;padding:4px;text-align:left">Tote</th><th style="border:1px solid #ddd;padding:4px;text-align:left">Reason</th></tr></thead><tbody></tbody>';
+        unprocessedTable.style = "width:100%;border-collapse:collapse;font-size:12px;border:1px solid #ddd;";
+        unprocessedTable.innerHTML = '<thead><tr><th style="border:1px solid #ddd;padding:4px;text-align:left;background:#f5f5f5;">Tote</th><th style="border:1px solid #ddd;padding:4px;text-align:left;background:#f5f5f5;">Reason</th></tr></thead><tbody></tbody>';
+
+        unprocessedDiv.appendChild(unprocessedHeading);
+        unprocessedDiv.appendChild(unprocessedTable);
 
         // Append elements
         container.appendChild(delayWrapper);
@@ -105,9 +105,7 @@
         container.appendChild(statsEl);
         container.appendChild(btn);
         container.appendChild(statusDiv);
-        unprocessedTableDiv.appendChild(unprocessedTable);
-        unprocessedHeading.appendChild(unprocessedTableDiv);
-        unprocessedDiv.appendChild(unprocessedHeading);
+        
         document.body.appendChild(unprocessedDiv);
         document.body.appendChild(container);
 
@@ -115,15 +113,12 @@
         btn.addEventListener('click', async () => {
             await handleProcessClick(textarea, statusDiv);
         });
-
-        // Start observing for error modals
-        //startErrorObserver();
     }
 
     // --- Utility: log unprocessed tote ---
     function logUnprocessedTote(toteId, reason) {
         const table = document.getElementById('unprocessed-totes-table');
-        const unprocessedDiv = document.getElementById('unprocessed-div'); //unprocessed-div
+        const unprocessedDiv = document.getElementById('unprocessed-div');
         unprocessedDiv.style.display = 'block';
 
         if (!table) return;
@@ -140,11 +135,10 @@
     // --- Main processing handler ---
     async function handleProcessClick(textarea, statusDiv) {
         const originalLines = textarea.value.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-        // Remove duplicates using Set, then convert back to an array
         const lines = [...new Set(originalLines)];
-        const status = statusDiv;
         const table = document.getElementById('unprocessed-totes-table');
         if (!table) return;
+        
         const tbody = table.querySelector('tbody');
         const delayEnabledEl = document.getElementById('delay-enable-checkbox');
         const delayEnabled = !!(delayEnabledEl && delayEnabledEl.checked);
@@ -164,117 +158,114 @@
             i += 1;
             output(`[Bind Automation] Processing: ${id}`);
 
-            // Start processing
+            // Start scanning the ID
             window.aft.scan && window.aft.scan(id);
-            status.innerText = `Checking (${i}/${lines.length}): ${id}`;
-            status.style.color = "blue";
-            toteId = id;
+            statusDiv.innerText = `Checking (${i}/${lines.length}): ${id}`;
+            statusDiv.style.color = "blue";
 
-            // Wait for either success or error modal
-            //const result = await Promise.race([
-                //waitForSuccessMessage(),
-                //waitForErrorModal()
-            //]);
+            // Wait for success message
             const result = await waitForSuccessMessage();
-            //console.info('[Bind Automation] Result: ', result);
 
-            // If error modal detected and returned a toteId, it has been logged and dismissed.
             if (result && result.type === 'error') {
-                status.innerText = `Skipped (${i}/${lines.length}): ${result.toteId}`;
-                status.style.color = "orange";
+                statusDiv.innerText = `Error (${i}/${lines.length}): ${id}`;
+                statusDiv.style.color = "orange";
                 failCount++;
                 updateStats();
-                // continue to next ID
-                await new Promise(r => setTimeout(r, 600)); // small pause
+                await sleep(600);
                 continue;
             }
 
-            // Otherwise proceed
             if (result && result.type === 'success') {
-                window.aft.scan('C');
-                //window.aft && window.aft(paxValue);
-                // Wait for palletize completion or possible error modal
-                const postResult = await Promise.race([
-                    waitForPalletizeCompleteMessage(),
-                    waitForErrorModal()
-                ]);
-
-                if (postResult && postResult.type === 'error') {
-                    const reasonText = (postResult.reason || '').toString().toLowerCase();
-
-                    // Detect vendor-mix / MIX_OF_VENDOR_CODE / vendor code mismatch cases
-                    const isVendorMix = reasonText.includes('mix_of_vendor_code') ||
-                                        reasonText.includes('mix of vendor') ||
-                                        reasonText.includes('vendor code mismatch') ||
-                                        reasonText.includes('mix of different vendor');
-
-                    if (isVendorMix) {
-                        status.innerText = `No to try (${i}/${lines.length}): ${postResult.toteId || ''}`;
-                        status.style.color = "orange";
+                // Wait for confirmation modal
+                const confirmResult = await waitForConfirmationModal();
+                
+                if (confirmResult && confirmResult.type === 'confirmed') {
+                    // Hit 'C' to confirm
+                    window.aft.scan('C');
+                    
+                    // Wait for completion or error
+                    const completionResult = await waitForPalletizeCompleteMessage();
+                    
+                    if (completionResult && completionResult.type === 'success') {
+                        statusDiv.innerText = `Success (${i}/${lines.length}): ${id}`;
+                        statusDiv.style.color = "green";
+                        successCount++;
+                        updateStats();
+                    } else if (completionResult && completionResult.type === 'error') {
+                        const reasonText = (completionResult.reason || '').toString().toLowerCase();
+                        
+                        const isVendorMix = reasonText.includes('mix_of_vendor_code') ||
+                                            reasonText.includes('mix of vendor') ||
+                                            reasonText.includes('vendor code mismatch') ||
+                                            reasonText.includes('mix of different vendor');
+                        
+                        if (isVendorMix) {
+                            statusDiv.innerText = `Vendor Mix (${i}/${lines.length}): ${id}`;
+                            logUnprocessedTote(id, reasonText);
+                        } else {
+                            statusDiv.innerText = `Completion Error (${i}/${lines.length}): ${id}`;
+                            logUnprocessedTote(id, reasonText);
+                        }
                         failCount++;
                         updateStats();
-                        await new Promise(r => setTimeout(r, 600));
-                        continue;
                     }
-                    successCount++;
-                    updateStats();
-
-                    // Non-vendor-mix errors fall through to default skip behavior
-                    status.innerText = `PAX failed (${i}/${lines.length}): ${postResult.toteId || ''}`;
-                    status.style.color = "orange";
-                    await new Promise(r => setTimeout(r, 600));
-                    continue;
                 }
             }
 
-            // Optional delay between items
-            await new Promise(r => setTimeout(r, 500));
+            await sleep(500);
 
             // Apply configured delay between items if enabled
             if (delayEnabled && delaySeconds > 0) {
-				      console.log(`Delaying ${delaySeconds} seconds`);
-              await new Promise(r => setTimeout(r, delaySeconds * 1000));
+                output(`[Bind Automation] Delaying ${delaySeconds} seconds`);
+                await sleep(delaySeconds * 1000);
             }
         }
 
         textarea.disabled = false;
         textarea.value = "";
-        status.innerText = `Finished! Processed ${lines.length} items`;
-        status.style.color = "green";
+        statusDiv.innerText = `Finished! Processed ${lines.length} items`;
+        statusDiv.style.color = "green";
     }
 
-    // --- wait for success message ---
+    // --- Wait for success message (binding summary) ---
     function waitForSuccessMessage(timeoutMs = 8000) {
-        output("[Bind Automation] waitForSuccessMessage");
+        output("[Bind Automation] Waiting for success message");
         return new Promise((resolve) => {
             let resolved = false;
-            const observer = new MutationObserver((mutations) => {
-                for (const mutation of mutations) {
-                    const successStep = document.querySelector('#binding-summary-container');
-                    const msg = document.querySelector(".modal-message");
-                    output(`[Bind Automation] ${msg.innerText}`);
-                    // Check if .binding-summary-container is visible
-                    if (successStep && successStep.offsetParent !== null) {
-                        //output("[Bind Automation] Found binding-summary-container element!");
-                        if (msg && msg.innerText.includes("Current bindings for")) {
-                            //output("[Bind Automation] Found bindings for:");
-                            if (!resolved) {
-                                // Fallback: if no <ul> but message has "Current bindings for", still resolve
-                                resolved = true;
-                                observer.disconnect();
-                                resolve({ type: 'success' });
-                                return;
-                            }
+
+            function check() {
+                const successStep = document.querySelector('#binding-summary-container');
+                const msg = document.querySelector(".modal-message");
+                
+                if (successStep && successStep.offsetParent !== null && msg) {
+                    const msgText = msg.innerText || "";
+                    if (msgText.includes("Current bindings for")) {
+                        if (!resolved) {
+                            resolved = true;
+                            observer.disconnect();
+                            clearTimeout(timeout);
+                            resolve({ type: 'success' });
                         }
+                        return true;
                     }
                 }
+                return false;
+            }
 
+            if (check()) return;
+
+            const observer = new MutationObserver(() => {
+                if (!resolved && check()) {
+                    resolved = true;
+                    observer.disconnect();
+                    clearTimeout(timeout);
+                    resolve({ type: 'success' });
+                }
             });
 
             observer.observe(document.body, { childList: true, subtree: true, characterData: true });
 
-            // Fallback timeout to avoid hanging forever
-            setTimeout(() => {
+            const timeout = setTimeout(() => {
                 if (!resolved) {
                     resolved = true;
                     observer.disconnect();
@@ -284,188 +275,201 @@
         });
     }
 
-    // Update Stats
-    function updateStats() {
-        if (statsEl) {
-            statsEl.textContent = "✅ " + successCount + " | ❌ " + failCount;
-        }
-    }
-
-
-    // --- wait for palletize complete message ---
-    function waitForPalletizeCompleteMessage(timeoutMs = 8000) {
-      const phrase = 'Successfully bound';
-      return new Promise((resolve) => {
-        let resolved = false;
-
-        function found() {
-          const parent = document.querySelector('.success-step') || document.querySelector('.step-container.view.complete');
-          if (parent && parent.textContent && parent.textContent.includes(phrase)) return true;
-          if (document.body && document.body.innerText && document.body.innerText.includes(phrase)) return true;
-          return false;
-        }
-
-        if (found()) return resolve({ type: 'success' });
-
-        const observer = new MutationObserver(() => {
-          if (found() && !resolved) {
-            resolved = true;
-            observer.disconnect();
-            clearInterval(poll);
-            resolve({ type: 'success' });
-          }
-        });
-
-        observer.observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true });
-
-        const poll = setInterval(() => {
-          if (found() && !resolved) {
-            resolved = true;
-            observer.disconnect();
-            clearInterval(poll);
-            resolve({ type: 'success' });
-          }
-        }, 120);
-
-        setTimeout(() => {
-          if (!resolved) {
-            resolved = true;
-            observer.disconnect();
-            clearInterval(poll);
-            resolve({ type: 'timeout' });
-          }
-        }, timeoutMs);
-      });
-    }
-
-    // --- wait for error modal (and handle it) ---
-    function waitForErrorModal(timeoutMs = 18000) {
-        output('[Bind Automation] waitForErrorModal');
+    // --- Wait for confirmation modal ---
+    function waitForConfirmationModal(timeoutMs = 5000) {
+        output("[Bind Automation] Waiting for confirmation modal");
         return new Promise((resolve) => {
-            setTimeout( () => {
             let resolved = false;
 
-            // If an error modal already present, handle immediately
-            const existing = findErrorModal();
-            if (existing) {
-                const info = handleErrorModal(existing);
-                resolved = true;
-                resolve({ type: 'error', toteId: info.toteId, reason: info.reason });
-                return;
-            }
-
-            const observer = new MutationObserver((mutations) => {
-                for (const m of mutations) {
-                    const modal = findErrorModal();
-                    if (modal) {
-                        const info = handleErrorModal(modal);
+            function check() {
+                const msg = document.querySelector(".modal-message");
+                if (msg) {
+                    const msgText = msg.innerText || "";
+                    if (msgText.includes("Are you sure you want to bind everything to")) {
                         if (!resolved) {
                             resolved = true;
                             observer.disconnect();
-                            resolve({ type: 'error', toteId: info.toteId, reason: info.reason });
-                            return;
+                            clearTimeout(timeout);
+                            resolve({ type: 'confirmed' });
                         }
+                        return true;
                     }
+                }
+                return false;
+            }
+
+            if (check()) return;
+
+            const observer = new MutationObserver(() => {
+                if (!resolved && check()) {
+                    resolved = true;
+                    observer.disconnect();
+                    clearTimeout(timeout);
+                    resolve({ type: 'confirmed' });
+                }
+            });
+
+            observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+
+            const timeout = setTimeout(() => {
+                if (!resolved) {
+                    resolved = true;
+                    observer.disconnect();
+                    resolve({ type: 'timeout' });
+                }
+            }, timeoutMs);
+        });
+    }
+
+    // --- Wait for palletize complete message ---
+    function waitForPalletizeCompleteMessage(timeoutMs = 8000) {
+        const phrase = 'Successfully bound';
+        output("[Bind Automation] Waiting for completion message");
+        
+        return new Promise((resolve) => {
+            let resolved = false;
+
+            function check() {
+                const parent = document.querySelector('.success-step') || document.querySelector('.step-container.view.complete');
+                if (parent && parent.textContent && parent.textContent.includes(phrase)) return true;
+                if (document.body && document.body.innerText && document.body.innerText.includes(phrase)) return true;
+                return false;
+            }
+
+            if (check() && !resolved) {
+                resolved = true;
+                return resolve({ type: 'success' });
+            }
+
+            const observer = new MutationObserver(() => {
+                if (check() && !resolved) {
+                    resolved = true;
+                    observer.disconnect();
+                    clearInterval(poll);
+                    clearTimeout(timeout);
+                    resolve({ type: 'success' });
+                }
+            });
+
+            observer.observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true });
+
+            const poll = setInterval(() => {
+                if (check() && !resolved) {
+                    resolved = true;
+                    observer.disconnect();
+                    clearInterval(poll);
+                    clearTimeout(timeout);
+                    resolve({ type: 'success' });
+                }
+            }, 120);
+
+            const timeout = setTimeout(() => {
+                if (!resolved) {
+                    resolved = true;
+                    observer.disconnect();
+                    clearInterval(poll);
+                    resolve({ type: 'timeout' });
+                }
+            }, timeoutMs);
+        });
+    }
+
+    // --- Wait for error modal ---
+    function waitForErrorModal(timeoutMs = 5000) {
+        output('[Bind Automation] Waiting for error modal');
+        return new Promise((resolve) => {
+            let resolved = false;
+
+            function checkError() {
+                const modal = document.querySelector('#diversion-awaiting-scan-container');
+                return !!(modal && (modal.offsetWidth || modal.offsetHeight || modal.getClientRects().length));
+            }
+
+            const existing = checkError();
+            if (existing) {
+                const info = handleErrorModal();
+                resolved = true;
+                return resolve({ type: 'error', toteId: info.toteId, reason: info.reason });
+            }
+
+            const observer = new MutationObserver(() => {
+                if (!resolved && checkError()) {
+                    const info = handleErrorModal();
+                    resolved = true;
+                    observer.disconnect();
+                    clearTimeout(timeout);
+                    resolve({ type: 'error', toteId: info.toteId, reason: info.reason });
                 }
             });
 
             observer.observe(document.body, { childList: true, subtree: true });
 
-            // Timeout fallback
-            setTimeout(() => {
+            const timeout = setTimeout(() => {
                 if (!resolved) {
                     resolved = true;
                     observer.disconnect();
-                    resolve(null); // no error modal within timeout
+                    resolve(null);
                 }
             }, timeoutMs);
-            }, 1000);
         });
     }
 
-    // Helper: locate error modal element
-    function findErrorModal() {
-        // Common selectors used in example
-        //output('[Bind Automation] findErrorModal');
-        //return document.querySelector('#diversion-awaiting-scan-container') || null;
-        const modal = document.querySelector('#diversion-awaiting-scan-container');
-
-        // Returns true only if the element exists and is physically visible
-        return !!(modal && (modal.offsetWidth || modal.offsetHeight || modal.getClientRects().length));
-    }
-
-    // Helper: extract info and dismiss modal
-    function handleErrorModal(modalEl) {
-        output('[Bind Automation] handleErrorModal')
+    // --- Handle error modal ---
+    function handleErrorModal() {
+        output('[Bind Automation] Handling error modal');
+        
         try {
-            //const text = modalEl?.textContent || "";
-
-            // 1. Improved Tote ID Extraction
-            // Priorities: 1. ts-style IDs, 2. "tote [id]", 3. Fallback
-            //const toteMatch = text.match(/\b(ts[A-Za-z0-9]+)\b/i) ||
-                              //text.match(/\btote\s+([A-Za-z0-9-]+)\b/i);
-            //const toteId = toteMatch ? toteMatch[1] : 'Unknown';
-
-            // 2. Reason Extraction - Extract full error message from .modal-message
             let reason = "";
-            const modalMessageEl = modalEl.querySelector('.modal-message');
-            let errorReason = modalMessageEl.textContent;
-            output('[Bind Automation] modalMessageEl :', errorReason);
-            if (modalMessageEl && errorReason.trim() != "") {
-                // Get the text content and clean it up
-                const rawText = errorReason.trim();
-                //console.log('[Bind Automation] rawText :', rawText);
-                // Extract the first line which contains Item, units, and Error
-                const errorLine = rawText.split('\n')[0].trim();
-                //console.log('[Bind Automation] errorLine :', errorLine);
-                reason = errorLine || rawText;
-                output('[Bind Automation] Extracted reason:', reason);
-                // Log result
-                logUnprocessedTote(toteId, reason);
+            const modalEl = document.querySelector('#diversion-awaiting-scan-container');
+            
+            if (modalEl) {
+                const modalMessageEl = modalEl.querySelector('.modal-message');
+                if (modalMessageEl) {
+                    const errorReason = modalMessageEl.textContent;
+                    const rawText = errorReason.trim();
+                    const errorLine = rawText.split('\n')[0].trim();
+                    reason = errorLine || rawText;
+                    output('[Bind Automation] Error reason:', reason);
+                    logUnprocessedTote('Unknown', reason);
+                }
             }
 
-            // Fallback: first two lines of text
-            if (!reason) {
-                reason = modalMessageEl.textContent.split('\n').map(s => s.trim()).filter(Boolean).slice(0, 2).join(' — ');
-            }
-
-            // 3. Modal Dismissal Logic
-            dismissModal(modalEl);
-
-            return { toteId, reason };
+            dismissErrorModal();
+            return { toteId: 'Unknown', reason };
         } catch (err) {
             console.error('[Bind Automation] Error handling modal:', err);
             return { toteId: 'Unknown', reason: 'Error handling modal' };
         }
     }
 
-    // Sub-function to keep logic separated
-    function dismissModal(modalEl) {
-        output('[Bind Automation] dismissModal');
-        if (!modalEl) return;
-
-        // 1. Keyboard Shortcut
+    // --- Dismiss error modal ---
+    function dismissErrorModal() {
+        output('[Bind Automation] Dismissing error modal');
+        
         try {
             const ev = new KeyboardEvent('keydown', { key: 'b', code: 'KeyB', keyCode: 66, bubbles: true });
             document.dispatchEvent(ev);
         } catch (e) {}
 
-        // 2. Button Click
         setTimeout(() => {
-          window.aft.scan("b");
-        }, 1000);
-
-        // 3. Nuclear Removal
-        //setTimeout(() => {
-            //const overlay = document.querySelector('.overlay');
-            //overlay?.remove();
-            //modalEl?.remove();
-        //}, 300);
+            window.aft.scan("b");
+        }, 500);
     }
 
-    // --- Start script when page loads ---
+    // --- Update Stats ---
+    function updateStats() {
+        if (statsEl) {
+            statsEl.textContent = "✅ " + successCount + " | ❌ " + failCount;
+        }
+    }
+
+    // --- Sleep helper ---
+    function sleep(ms) {
+        return new Promise(r => setTimeout(r, ms));
+    }
+
+    // --- Initialize on page load ---
     window.addEventListener('load', () => {
-        // small delay to ensure page UI exists
-        setTimeout(waitForSuccessMessage, 150);
+        setTimeout(createUI, 150);
     });
 })();
