@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Bind Auto Continue (headless) + A-to-switch + Config
 // @namespace    HOU3
-// @version      1.0.8
-// @description  Headless: wait for bind confirmation modal, allow pressing 'A' to switch destinations (even before modal), otherwise hit 'C' via window.aft.scan, wait for it to dismiss, loop. Adds configurable wait and pause option (UI + hotkey P).
+// @version      1.0.9
+// @description  Headless: wait for bind confirmation modal, allow pressing 'A' to switch destinations (even before modal), otherwise hit 'C' via window.aft.scan, wait for it to dismiss, loop. Adds configurable wait and pause option (UI + hotkey P). Pause is strictly manual.
 // @author       Pedro Sanchez (pefsanch) (modified)
 // @match        https://tx-b-hierarchy-iad.iad.proxy.amazon.com/bindHierarchy
 // @match        https://tx-b-hierarchy.na.aftx.amazonoperations.app/bindHierarchy
@@ -47,6 +47,7 @@
         };
     }
 
+    // Only set paused via the UI toggle or the P hotkey. No other code should flip pause implicitly.
     function setConfig({ waitMs, paused, preSwitchMs }) {
         if (typeof waitMs === 'number' && Number.isFinite(waitMs) && waitMs > 0) {
             localStorage.setItem(LS_KEY_WAIT, String(Math.max(50, Math.round(waitMs))));
@@ -82,7 +83,7 @@
         wrapper.innerHTML = `
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
                 <strong style="font-size:12px">Bind Auto</strong>
-                <span id="bind-auto-version" style="opacity:0.8;font-size:11px">v1.0.8</span>
+                <span id="bind-auto-version" style="opacity:0.8;font-size:11px">v1.0.9</span>
             </div>
             <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
                 <label for="bind-auto-wait" style="font-size:11px;opacity:0.9;min-width:60px;">Wait (ms)</label>
@@ -126,12 +127,14 @@
             }
         });
 
+        // Pause/resume toggle: only this button and the P hotkey change paused state
         toggleBtn.addEventListener('click', () => {
             const cfg = getConfig();
             setConfig({ paused: !cfg.paused });
         });
 
         resetBtn.addEventListener('click', () => {
+            // Clear saved values so defaults are used; ensure paused is cleared (manual only)
             localStorage.removeItem(LS_KEY_WAIT);
             localStorage.removeItem(LS_KEY_PAUSED);
             localStorage.removeItem(LS_KEY_PRE_SWITCH);
@@ -367,17 +370,12 @@
                 continue;
             }
 
-            // re-check pause in case user paused while modal appeared
+            // If user manually paused while the modal appeared, skip auto-confirm for this modal but DO NOT block waiting for resume.
+            // Pause is strictly manual and should not force the user to "Resume" after every automatic confirm.
             if (getConfig().paused) {
-                console.info('Bind Auto Continue: paused while modal present; skipping auto-confirm until resumed');
-                // Wait until unpaused or modal goes away
-                while (getConfig().paused) {
-                    // If modal disappears while paused, break out
-                    const gone = await waitForModalGone(500);
-                    if (gone) break;
-                    await sleep(300);
-                }
-                // continue to top
+                console.info('Bind Auto Continue: paused while modal present; skipping auto-confirm for this modal (pause is manual)');
+                // Wait a short time for modal to resolve naturally to avoid tight-looping, then continue monitoring.
+                await waitForModalGone(10000);
                 continue;
             }
 
