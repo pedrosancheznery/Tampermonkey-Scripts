@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         Bind Auto Continue (headless)
+// @name         Bind Auto Continue (headless) + A-to-switch + Config
 // @namespace    HOU3
-// @version      1.0.5
-// @description  Headless: wait for bind confirmation modal, hit 'C' via window.aft.scan, wait for it to dismiss, loop.
-// @author       Pedro Sanchez (pefsanch)
+// @version      1.0.7
+// @description  Headless: wait for bind confirmation modal, allow pressing 'A' to switch destinations, otherwise hit 'C' via window.aft.scan, wait for it to dismiss, loop. Adds configurable wait and pause option (UI + hotkey P).
+// @author       Pedro Sanchez (pefsanch) (modified)
 // @match        https://tx-b-hierarchy-iad.iad.proxy.amazon.com/bindHierarchy
 // @match        https://tx-b-hierarchy.na.aftx.amazonoperations.app/bindHierarchy
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=amazon.com
@@ -20,8 +20,112 @@
     // Text used to detect the confirmation modal. Adjust if the app text changes.
     const CONFIRM_PHRASE = 'Are you sure you want to bind everything to';
 
+    // LocalStorage keys for persistence
+    const LS_KEY_WAIT = 'bindAuto_wait_ms';
+    const LS_KEY_PAUSED = 'bindAuto_paused';
+
+    // Default values
+    const DEFAULT_WAIT_MS = 800;
+
     // Short helper
     function sleep(ms) { return new Promise((res) => setTimeout(res, ms)); }
+
+    // Configuration helpers
+    function getConfig() {
+        const wait = parseInt(localStorage.getItem(LS_KEY_WAIT), 10);
+        const paused = localStorage.getItem(LS_KEY_PAUSED) === '1';
+        return {
+            waitMs: Number.isFinite(wait) && wait > 0 ? wait : DEFAULT_WAIT_MS,
+            paused: !!paused,
+        };
+    }
+
+    function setConfig({ waitMs, paused }) {
+        if (typeof waitMs === 'number' && Number.isFinite(waitMs) && waitMs > 0) {
+            localStorage.setItem(LS_KEY_WAIT, String(Math.max(50, Math.round(waitMs))));
+        }
+        if (typeof paused === 'boolean') {
+            localStorage.setItem(LS_KEY_PAUSED, paused ? '1' : '0');
+        }
+        updateControlUI();
+    }
+
+    // Create a small control UI (bottom-right) to adjust wait and pause/resume
+    function createControlUI() {
+        if (document.getElementById('bind-auto-control')) return; // already created
+
+        const wrapper = document.createElement('div');
+        wrapper.id = 'bind-auto-control';
+        wrapper.style.position = 'fixed';
+        wrapper.style.right = '12px';
+        wrapper.style.bottom = '12px';
+        wrapper.style.zIndex = 1_000_000; // high
+        wrapper.style.background = 'rgba(30,30,30,0.9)';
+        wrapper.style.color = '#fff';
+        wrapper.style.padding = '8px 10px';
+        wrapper.style.borderRadius = '6px';
+        wrapper.style.fontFamily = 'sans-serif';
+        wrapper.style.fontSize = '12px';
+        wrapper.style.boxShadow = '0 2px 8px rgba(0,0,0,0.5)';
+        wrapper.style.minWidth = '180px';
+
+        wrapper.innerHTML = `
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                <strong style="font-size:12px">Bind Auto</strong>
+                <span id="bind-auto-version" style="opacity:0.8;font-size:11px">v1.0.7</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+                <label for="bind-auto-wait" style="font-size:11px;opacity:0.9;">Wait (ms)</label>
+                <input id="bind-auto-wait" type="number" min="50" step="50" style="flex:1;padding:4px;border-radius:4px;border:1px solid #444;background:#222;color:#fff;font-size:12px;" />
+            </div>
+            <div style="display:flex;gap:6px;align-items:center;justify-content:space-between;">
+                <button id="bind-auto-toggle" style="flex:1;padding:6px;border-radius:4px;border:0;background:#1a73e8;color:white;cursor:pointer;">Pause</button>
+                <button id="bind-auto-reset" title="Reset to defaults" style="margin-left:6px;padding:6px;border-radius:4px;border:0;background:#333;color:#ddd;cursor:pointer;">Reset</button>
+            </div>
+            <div id="bind-auto-hint" style="margin-top:6px;font-size:11px;opacity:0.8">Hotkey: <strong>P</strong> pause/resume • Press <strong>A</strong> while modal is present to switch destination</div>
+        `;
+
+        document.body.appendChild(wrapper);
+
+        // Wire up controls
+        const waitInput = document.getElementById('bind-auto-wait');
+        const toggleBtn = document.getElementById('bind-auto-toggle');
+        const resetBtn = document.getElementById('bind-auto-reset');
+
+        waitInput.addEventListener('change', () => {
+            const v = parseInt(waitInput.value, 10);
+            if (Number.isFinite(v) && v >= 50) {
+                setConfig({ waitMs: v });
+            } else {
+                // restore to current config
+                updateControlUI();
+            }
+        });
+
+        toggleBtn.addEventListener('click', () => {
+            const cfg = getConfig();
+            setConfig({ paused: !cfg.paused });
+        });
+
+        resetBtn.addEventListener('click', () => {
+            localStorage.removeItem(LS_KEY_WAIT);
+            localStorage.removeItem(LS_KEY_PAUSED);
+            updateControlUI();
+        });
+
+        updateControlUI();
+    }
+
+    function updateControlUI() {
+        const cfg = getConfig();
+        const waitInput = document.getElementById('bind-auto-wait');
+        const toggleBtn = document.getElementById('bind-auto-toggle');
+        if (waitInput) waitInput.value = String(cfg.waitMs);
+        if (toggleBtn) {
+            toggleBtn.textContent = cfg.paused ? 'Resume' : 'Pause';
+            toggleBtn.style.background = cfg.paused ? '#0f9d58' : '#1a73e8';
+        }
+    }
 
     // Wait until a confirmation modal appears. Resolves true when found.
     function waitForConfirmationModal(timeoutMs = 0) {
@@ -137,12 +241,73 @@
         return false;
     }
 
-    // Main loop: wait for confirmation -> confirm -> wait for modal to disappear -> repeat
+    // When a confirmation modal appears, give the user a short window to press 'A' to switch destinations.
+    // If 'A' is pressed during the window we call window.aft.scan('A') and skip auto-confirm for that modal.
+    async function waitForUserSwitchOrConfirm(waitMs) {
+        let aPressed = false;
+
+        function onKey(e) {
+            try {
+                const key = (e.key || '').toLowerCase();
+                if (key === 'a') {
+                    // Attempt to switch destination
+                    aPressed = true;
+                    if (window.aft && typeof window.aft.scan === 'function') {
+                        try {
+                            window.aft.scan('A');
+                            console.info('Bind Auto Continue: called window.aft.scan("A") due to user keypress');
+                        } catch (err) {
+                            console.warn('Bind Auto Continue: window.aft.scan("A") threw', err);
+                        }
+                    } else {
+                        console.warn('Bind Auto Continue: window.aft.scan not available to handle "A" press');
+                    }
+                    // Let the modal update; we keep listening only for this modal event instance.
+                }
+            } catch (err) {
+                // swallow
+            }
+        }
+
+        // Listen only while the modal is present.
+        window.addEventListener('keydown', onKey, false);
+        await sleep(waitMs);
+        window.removeEventListener('keydown', onKey, false);
+
+        return aPressed;
+    }
+
+    // Hotkey: P to toggle pause/resume at any time
+    function setupHotkeys() {
+        window.addEventListener('keydown', (e) => {
+            try {
+                const key = (e.key || '').toLowerCase();
+                if (key === 'p') {
+                    const cfg = getConfig();
+                    setConfig({ paused: !cfg.paused });
+                }
+            } catch (err) {
+                // ignore
+            }
+        }, false);
+    }
+
+    // Main loop: wait for confirmation -> give user time to press 'A' -> confirm if no 'A' -> wait for modal to disappear -> repeat
     async function mainLoop() {
         // small initial delay to allow page to stabilize
         await sleep(200);
 
         while (true) {
+            const cfg = getConfig();
+
+            // If paused, sleep and re-check
+            if (cfg.paused) {
+                // sleep a bit so we don't busy-loop
+                // eslint-disable-next-line no-await-in-loop
+                await sleep(500);
+                continue;
+            }
+
             const saw = await waitForConfirmationModal(0); // no timeout: wait indefinitely
             if (!saw) {
                 // shouldn't happen when timeout=0, but safeguard
@@ -150,8 +315,33 @@
                 continue;
             }
 
-            // send confirm via window.aft.scan (with retries)
-            await sendConfirm();
+            // re-check pause in case user paused while modal appeared
+            if (getConfig().paused) {
+                console.info('Bind Auto Continue: paused while modal present; skipping auto-confirm until resumed');
+                // Wait until unpaused or modal goes away
+                while (getConfig().paused) {
+                    // If modal disappears while paused, break out
+                    const gone = await waitForModalGone(500);
+                    if (gone) break;
+                    await sleep(300);
+                }
+                // continue to top
+                continue;
+            }
+
+            // read current wait value (configurable)
+            const waitMs = getConfig().waitMs;
+
+            // give user a short chance to press 'A' to switch destinations
+            const userSwitched = await waitForUserSwitchOrConfirm(waitMs);
+
+            if (!userSwitched) {
+                // no 'A' detected, send confirm via window.aft.scan (with retries)
+                await sendConfirm();
+            } else {
+                // user pressed 'A' — we won't auto-send 'C' for this modal instance.
+                console.info('Bind Auto Continue: user switched destination; skipping auto-confirm for this modal');
+            }
 
             // wait for modal to go away (or timeout)
             await waitForModalGone(10000);
@@ -164,6 +354,14 @@
     // Start after load
     window.addEventListener('load', () => {
         setTimeout(() => {
+            try {
+                createControlUI();
+                setupHotkeys();
+            } catch (err) {
+                // ignore UI errors
+                console.error('Bind Auto Continue UI init error:', err);
+            }
+
             mainLoop().catch((err) => console.error('Bind Auto Continue error:', err));
         }, 150);
     });
