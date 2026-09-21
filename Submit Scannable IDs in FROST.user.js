@@ -1,13 +1,15 @@
 // ==UserScript==
 // @name         Submit Scannable IDs in FROST
 // @namespace    HOU3
-// @version      1.1.22
+// @version      1.1.23
 // @author       Pedro Sanchez (pefsanch)
 // @description  Read scannable IDs from user input and submit them to a form
 // @match        https://frost-prod-jlb-iad.iad.proxy.amazon.com/packnhold/create
 // @match        https://frost-prod.na.aftx.amazonoperations.app/packnhold/create
 // @grant        GM.xmlHttpRequest
 // @grant        GM_addStyle
+// @connect      qifcr.na.aftx.amazonoperations.app
+// @connect      qi-fcresearch-na.corp.amazon.com
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=amazon.com
 // @homepage     https://github.com/pedrosancheznery/Tampermonkey-Scripts/
 // @downloadURL  https://raw.githubusercontent.com/pedrosancheznery/Tampermonkey-Scripts/main/Submit%20Scannable%20IDs%20in%20FROST.user.js
@@ -18,468 +20,255 @@
 (function() {
     'use strict';
 
-    // Add CSS for the new table
+    const API_ENDPOINTS = [
+        'https://qifcr.na.aftx.amazonoperations.app/HOU3/results/container-hierarchy',
+        'https://qi-fcresearch-na.corp.amazon.com/HOU3/results/container-hierarchy'
+    ];
+    let selectedApiUrl = API_ENDPOINTS[0];
+
     GM_addStyle(`
-        #tote-log-container {
-            position: fixed;
-            bottom: 95px;
-            left: 270px;
-            width: 400px;
-            background-color: #f9f9f9;
-            border: 2px solid rgb(51, 51, 51);
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            font-family: sans-serif;
-            font-size: 9px;
-            padding: 10px;
-			overflow-y: auto;
-			max-height: 360px;
-            z-index: 10000;
+        #tote-log-container, #inputModal {
+            color: #e6edf3 !important;
+            background-color: #161b22 !important;
+            border-color: #484f58 !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,.65) !important;
         }
-        #tote-log-container h4 {
-            margin: 0 0 10px;
-            font-size: 12px;
-			font-weight: bold;
-            text-align: center;
-        }
-        #tote-error-log-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        #tote-error-log-table th, #tote-error-log-table td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-			font-size: 9px;
-        }
-        #tote-error-log-table thead tr {
-            background-color: #003399;
-            color: #FFFFFF;
-        }
-        #tote-error-log-table tbody tr:nth-child(even) {
-            background-color: #f2f2f2;
-        }
-        .api-url-selector {
-            margin-bottom: 8px;
-            font-size: 10px;
-        }
-        .api-url-selector label {
-            display: flex;
-            align-items: center;
-            margin-bottom: 4px;
-            cursor: pointer;
-        }
-        .api-url-selector input[type="radio"] {
-            margin-right: 6px;
-            cursor: pointer;
-        }
+        #tote-log-container { position: fixed; bottom: 95px; left: 270px; width: 400px;
+            border: 2px solid #484f58; border-radius: 8px; font-family: sans-serif;
+            font-size: 9px; padding: 10px; overflow-y: auto; max-height: 360px; z-index: 10000; }
+        #tote-log-container h4 { margin: 0 0 10px; font-size: 12px; font-weight: bold; text-align: center; }
+        #tote-error-log-table { width: 100%; border-collapse: collapse; }
+        #tote-error-log-table th, #tote-error-log-table td { border: 1px solid #30363d;
+            padding: 8px; text-align: left; font-size: 9px; }
+        #tote-error-log-table thead tr { background-color: #21262d; color: #58a6ff; }
+        #tote-error-log-table tbody tr:nth-child(even) { background-color: #1c2128; }
+        #tote-error-log-table tbody tr:nth-child(odd) { background-color: #161b22; }
+        .api-url-selector { margin-bottom: 8px; font-size: 10px; }
+        .api-url-selector label { display: flex; align-items: center; margin-bottom: 4px; cursor: pointer; }
+        .api-url-selector input[type="radio"] { margin-right: 6px; cursor: pointer; }
+        #inputModal { position: fixed; bottom: 95px; left: 10px; padding: 15px; width: 260px;
+            border: 2px solid #484f58; border-radius: 8px; font-family: sans-serif; z-index: 9999; }
+        #inputModal input, #inputModal textarea { color: #e6edf3 !important; background: #0d1117 !important;
+            border: 1px solid #484f58 !important; }
+        #inputModal input::placeholder, #inputModal textarea::placeholder { color: #8b949e !important; }
+        #inputModal button { color: #fff !important; border: 1px solid #484f58 !important; }
+        #inputModal button:first-of-type { background: #8957e5 !important; }
+        #inputModal button:nth-last-of-type(2) { background: #238636 !important; }
+        #inputModal button:last-of-type { background: #da3633 !important; }
+        #check-status { color: #8b949e !important; }
     `);
 
-    // Create the container for the new table
     function createErrorLogTable() {
-        // Check if the table already exists
-        if (document.getElementById('tote-error-log-table')) {
-            return document.getElementById('tote-error-log-table').querySelector('tbody');
-        }
-
+        const existing = document.getElementById('tote-error-log-table');
+        if (existing) return existing.querySelector('tbody');
         const logContainer = document.createElement('div');
         logContainer.id = 'tote-log-container';
-        logContainer.innerHTML = `
-            <h4>Tote History</h4>
-            <table id="tote-error-log-table">
-                <thead>
-                    <tr>
-                        <th>Tote ID</th>
-                        <th>Disposition</th>
-                        <th>Items</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody id="tote-error-log-table-body">
-                </tbody>
-            </table>
-        `;
+        logContainer.innerHTML = `<h4>Tote History</h4><table id="tote-error-log-table">
+            <thead><tr><th>Tote ID</th><th>Disposition</th><th>Items</th><th>Status</th></tr></thead>
+            <tbody id="tote-error-log-table-body"></tbody></table>`;
         document.body.appendChild(logContainer);
-        return document.getElementById('tote-error-log-table').querySelector('tbody');
+        return logContainer.querySelector('tbody');
     }
 
-    // Function to add a new row to the table
     function addErrorLogRow(tableBody, id, disposition, itemCount, isSuccess) {
-        const newRow = document.createElement('tr');
-        newRow.innerHTML = `
-            <td>${id}</td>
-            <td>${disposition}</td>
-            <td>${itemCount}</td>
-            <td>${isSuccess ? '✔️' : '❌'}</td>
-        `;
-        tableBody.prepend(newRow); // Add to the top of the table
-		updateStats();
+        const row = document.createElement('tr');
+        [id, disposition, itemCount, isSuccess ? '✔️' : '❌'].forEach(value => {
+            const cell = document.createElement('td');
+            cell.textContent = value;
+            row.appendChild(cell);
+        });
+        tableBody.prepend(row);
+        updateStats();
     }
 
-    let toteLogTableBody, ErrorToteLogTableBody;
-    let toteId, statsEl;
-    let successCount = 0;
-    let failCount = 0;
-    let selectedApiUrl = "https://qifcr.na.aftx.amazonoperations.app/HOU3/results/container-hierarchy";
+    let ErrorToteLogTableBody, statsEl;
+    let successCount = 0, failCount = 0;
 
-    // Function to copy textarea content to clipboard
-    async function copyToClipboard(textarea) {
+    function setStatus(message, color = '#8b949e') {
+        const status = document.getElementById('check-status');
+        if (status) { status.textContent = message; status.style.color = color; }
+    }
+
+    function isAllowedEndpoint(url) {
         try {
-            await navigator.clipboard.writeText(textarea.value);
-            console.log('Copied to clipboard');
-        } catch (err) {
-            console.error('Clipboard write failed:', err);
+            const parsed = new URL(url);
+            return parsed.protocol === 'https:' && API_ENDPOINTS.includes(parsed.href);
+        } catch (error) {
+            return false;
         }
     }
 
-    // Function to fetch scannable IDs from container hierarchy
-    async function fetchScannableIdsFromContainer(containerId) {
-        const status = document.getElementById('check-status');
-        status.innerText = `Fetching data for container: ${containerId}`;
-        status.style.color = "blue";
+    function describeEndpointResponse(response, htmlDoc) {
+        const bodyText = htmlDoc.body?.innerText?.toLowerCase() || '';
+        const title = htmlDoc.title || '';
+        if (response.status === 401 || response.status === 403 ||
+            /sign in|log in|login|access denied|unauthorized|forbidden/.test(`${title} ${bodyText}`)) {
+            return 'Authentication or permission denied. Verify SSO, VPN, and endpoint access.';
+        }
+        if (response.status < 200 || response.status >= 300) {
+            return `Endpoint returned HTTP ${response.status}.`;
+        }
+        return 'The endpoint returned an unexpected page. Verify the site, container, and endpoint.';
+    }
 
-        return new Promise((resolve) => {
+    async function copyToClipboard(textarea) {
+        try { await navigator.clipboard.writeText(textarea.value); }
+        catch (error) { console.error('Clipboard write failed:', error); }
+    }
+
+    function fetchScannableIdsFromContainer(containerId) {
+        setStatus(`Fetching data for container: ${containerId}`, '#58a6ff');
+        if (!isAllowedEndpoint(selectedApiUrl)) {
+            setStatus('Error: Blocked endpoint configuration.', '#f85149');
+            console.error('Blocked endpoint:', selectedApiUrl);
+            return Promise.resolve([]);
+        }
+
+        return new Promise(resolve => {
             GM.xmlHttpRequest({
-                method: "POST",
-                url: selectedApiUrl,
-                data: `s=${containerId}`,
-                headers: {
-                    "Content-Type": "application/x-www-form-urlencoded"
-                },
-                onload: function(response) {
+                method: 'POST', url: selectedApiUrl, data: `s=${encodeURIComponent(containerId)}`,
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                timeout: 15000,
+                onload: response => {
                     try {
                         const parser = new DOMParser();
-                        const htmlDoc = parser.parseFromString(response.responseText, "text/html");
-
-                        // Find the table with child containers
+                        const htmlDoc = parser.parseFromString(response.responseText, 'text/html');
                         const table = htmlDoc.querySelector('#table-container-hierarchy');
-                        if (!table) {
-                            console.error('Could not find container hierarchy table');
-                            status.innerText = "Error: Table not found";
-                            status.style.color = "red";
+                        if (response.status < 200 || response.status >= 300 || !table) {
+                            const reason = describeEndpointResponse(response, htmlDoc);
+                            console.error('Hierarchy table missing:', { status: response.status,
+                                finalUrl: response.finalUrl || response.responseURL, title: htmlDoc.title,
+                                reason, bodyPreview: htmlDoc.body?.innerText?.slice(0, 500) });
+                            setStatus(`Error: ${reason}`, '#f85149');
                             resolve([]);
                             return;
                         }
 
-                        // Extract scannable IDs where quantity > 0
                         const scannableIds = [];
-                        const rows = table.querySelectorAll('tbody tr');
-
-                        rows.forEach(row => {
+                        table.querySelectorAll('tbody tr').forEach(row => {
                             const cells = row.querySelectorAll('td');
-                            if (cells.length >= 3) {
-                                const scannableId = cells[0].textContent.trim();
-                                const quantity = parseInt(cells[2].textContent.trim(), 10);
-
-                                if (quantity > 0) {
-                                    scannableIds.push(scannableId);
-                                    console.log(`Found: ${scannableId} (Qty: ${quantity})`);
-                                }
-                            }
+                            const quantity = parseInt(cells[2]?.textContent.trim(), 10);
+                            if (cells.length >= 3 && quantity > 0) scannableIds.push(cells[0].textContent.trim());
                         });
-
-                        console.log('Extracted scannable IDs:', scannableIds);
-
-                        // Fill the textarea with the scannable IDs
                         const textarea = document.getElementById('scannableIdsInput');
                         if (textarea) {
                             textarea.value = scannableIds.join('\n');
-                            // Copy to clipboard
                             copyToClipboard(textarea);
-                            status.innerText = `✅ Loaded ${scannableIds.length} IDs (copied to clipboard)`;
-                            status.style.color = "green";
                         }
-
+                        setStatus(`✅ Loaded ${scannableIds.length} IDs (copied to clipboard)`, '#3fb950');
                         resolve(scannableIds);
-                        submitScannableIDs(scannableIds); // Process IDs
+                        submitScannableIDs(scannableIds);
                     } catch (error) {
                         console.error('Error parsing response:', error);
-                        status.innerText = "Error parsing response";
-                        status.style.color = "red";
+                        setStatus('Error parsing endpoint response.', '#f85149');
                         resolve([]);
                     }
                 },
-                onerror: function(error) {
+                onerror: error => {
                     console.error('API request failed:', error);
-                    status.innerText = "Error: API request failed";
-                    status.style.color = "red";
+                    setStatus('Error: API request failed. Check endpoint access, SSO, or VPN.', '#f85149');
+                    resolve([]);
+                },
+                ontimeout: () => {
+                    setStatus('Error: Endpoint request timed out. Check network access.', '#f85149');
                     resolve([]);
                 }
             });
         });
     }
 
-    // Create the modal for user input
     function createModal() {
         const modal = document.createElement('div');
         modal.id = 'inputModal';
-        modal.style.position = 'fixed';
-        modal.style.bottom = '95px';
-        modal.style.left = '10px';
-        //modal.style.transform = 'translate(-50%, -50%)';
-        modal.style.padding = '15px';
-        modal.style.backgroundColor = '#f9f9f9';
-        modal.style.border = "2px solid #333";
-        modal.style.borderRadius = "8px";
-        modal.style.boxShadow = '0px 4px 10px rgba(0,0,0,0.3)';
-        modal.style.fontFamily = "sans-serif";
-        modal.style.width = "260px";
-        modal.style.zIndex = '9999';
-        //modal.style.display = 'none'; // Hidden by default
-
-        const header = document.createElement('div');
-        header.innerHTML = '<b style="display:block; margin-bottom:5px;">Tote Pack And Hold</b>';
-        modal.appendChild(header);
-
-        const containerInputLabel = document.createElement('div');
-        containerInputLabel.style = "font-size: 10px; margin-bottom: 2px; font-weight: bold;";
-        containerInputLabel.innerText = "Container ID:";
-        modal.appendChild(containerInputLabel);
-
+        modal.innerHTML = `<b style="display:block;margin-bottom:5px;">Tote Pack And Hold</b>
+            <div style="font-size:10px;margin-bottom:2px;font-weight:bold;">Container ID:</div>`;
         const containerInput = document.createElement('input');
-        containerInput.id = 'containerIdInput';
-        containerInput.type = 'text';
-        containerInput.placeholder = "e.g., paXPBT2JQYZ";
-        containerInput.style.width = '100%';
-        containerInput.style.padding = '6px';
-        containerInput.style.marginBottom = '8px';
-        containerInput.style.boxSizing = 'border-box';
+        containerInput.id = 'containerIdInput'; containerInput.type = 'text'; containerInput.placeholder = 'e.g., paXPBT2JQYZ';
+        Object.assign(containerInput.style, { width: '100%', padding: '6px', marginBottom: '8px', boxSizing: 'border-box' });
         modal.appendChild(containerInput);
 
-        // Add API URL selector
-        const apiUrlSelector = document.createElement('div');
-        apiUrlSelector.className = 'api-url-selector';
-        
-        const urlLabel = document.createElement('div');
-        urlLabel.style = "font-size: 10px; margin-bottom: 4px; font-weight: bold;";
-        urlLabel.innerText = "API Endpoint:";
-        apiUrlSelector.appendChild(urlLabel);
+        const selector = document.createElement('div'); selector.className = 'api-url-selector';
+        selector.innerHTML = '<div style="font-size:10px;margin-bottom:4px;font-weight:bold;">API Endpoint:</div>';
+        API_ENDPOINTS.forEach((url, index) => {
+            const label = document.createElement('label'); const radio = document.createElement('input');
+            radio.type = 'radio'; radio.name = 'apiUrl'; radio.value = url; radio.checked = index === 0;
+            radio.onchange = () => { if (radio.checked) selectedApiUrl = radio.value; };
+            label.append(radio, document.createTextNode(new URL(url).hostname)); selector.appendChild(label);
+        });
+        modal.appendChild(selector);
 
-        const label1 = document.createElement('label');
-        const radio1 = document.createElement('input');
-        radio1.type = 'radio';
-        radio1.name = 'apiUrl';
-        radio1.value = 'https://qifcr.na.aftx.amazonoperations.app/HOU3/results/container-hierarchy';
-        radio1.checked = true;
-        radio1.onchange = () => {
-            selectedApiUrl = radio1.value;
-        };
-        label1.appendChild(radio1);
-        label1.appendChild(document.createTextNode('qifcr.na.aftx'));
-        apiUrlSelector.appendChild(label1);
-
-        const label2 = document.createElement('label');
-        const radio2 = document.createElement('input');
-        radio2.type = 'radio';
-        radio2.name = 'apiUrl';
-        radio2.value = 'https://qi-fcresearch-na.corp.amazon.com/HOU3/results/container-hierarchy';
-        radio2.onchange = () => {
-            selectedApiUrl = radio2.value;
-        };
-        label2.appendChild(radio2);
-        label2.appendChild(document.createTextNode('qi-fcresearch-na.corp'));
-        apiUrlSelector.appendChild(label2);
-
-        modal.appendChild(apiUrlSelector);
-
-        const containerButton = document.createElement('button');
-        containerButton.innerText = "Container";
-        containerButton.style = "width: 100%; padding: 10px; cursor: pointer; background: #9c27b0; color: white; border: none; border-radius: 4px; font-weight: bold; margin-bottom: 8px;";
+        const containerButton = document.createElement('button'); containerButton.textContent = 'Container';
+        containerButton.style.cssText = 'width:100%;padding:10px;cursor:pointer;background:#8957e5;color:white;border:none;border-radius:4px;font-weight:bold;margin-bottom:8px;';
         containerButton.onclick = async () => {
-            const containerInput = document.getElementById('containerIdInput');
-            if (!containerInput.value.trim()) {
-                alert('Please enter a container ID');
-                return;
-            }
-            clearContents();
-            await fetchScannableIdsFromContainer(containerInput.value.trim());
-        };
-        modal.appendChild(containerButton);
+            if (!containerInput.value.trim()) { alert('Please enter a container ID'); return; }
+            clearContents(); await fetchScannableIdsFromContainer(containerInput.value.trim());
+        }; modal.appendChild(containerButton);
 
-        const input = document.createElement('textarea');
-        input.id = 'scannableIdsInput';
-        input.fontFamily = "monospace";
-        input.marginBottom = "20px";
-        input.placeholder = "Enter Scannable IDs (one per line):";
-        input.style.width = '100%';
-        input.style.height = '120px';
-        modal.appendChild(input);
+        const input = document.createElement('textarea'); input.id = 'scannableIdsInput'; input.placeholder = 'Enter Scannable IDs (one per line):';
+        input.style.cssText = 'width:100%;height:120px;box-sizing:border-box;'; modal.appendChild(input);
+        statsEl = document.createElement('div'); statsEl.style.cssText = 'font-size:12px;color:#8b949e;margin:14px 0;';
+        statsEl.textContent = '✅ 0 | ❌ 0'; modal.appendChild(statsEl);
 
-        const spacer = document.createElement("div");
-        spacer.style.margin = "5px";
-        spacer.style.padding = "5px";
-        modal.appendChild(spacer);
+        const submitButton = document.createElement('button'); submitButton.textContent = '▶ Process';
+        submitButton.style.cssText = 'width:60%;padding:8px;cursor:pointer;background:#238636;color:white;border:none;border-radius:4px;font-weight:bold;';
+        submitButton.onclick = () => submitScannableIDs(input.value.split('\n').map(id => id.trim()).filter(Boolean)); modal.appendChild(submitButton);
+        const clearButton = document.createElement('button'); clearButton.textContent = 'Clear';
+        clearButton.style.cssText = 'width:30%;padding:8px;cursor:pointer;background:#da3633;color:white;border:none;border-radius:4px;font-weight:bold;margin-left:10px;';
+        clearButton.onclick = clearContents; modal.appendChild(clearButton);
 
-        const countEl = document.createElement("div");
-        countEl.style.cssText = "font-size:12px;color:#888;margin-bottom:4px;";
-        countEl.textContent = "0 / 0";
-        //modal.appendChild(countEl);
-
-        statsEl = document.createElement("div");
-        statsEl.style.cssText = "font-size:12px;color:#888;margin-bottom:14px;";
-        statsEl.textContent = "✅ 0 | ❌ 0";
-        modal.appendChild(statsEl);
-
-        modal.appendChild(spacer);
-
-        const submitButton = document.createElement('button');
-        submitButton.innerText = "▶ Process";
-        submitButton.style = "width: 60%; padding: 8px; cursor: pointer; background: #28a745; color: white; border: none; border-radius: 4px; font-weight: bold;";
-        submitButton.onclick = () => {
-            // Split input by newline and trim whitespace
-            const ids = input.value.split('\n').map(id => id.trim()).filter(id => id); // Clean and filter
-            //modal.style.display = 'none'; // Hide modal
-            submitScannableIDs(ids); // Process IDs
-        };
-        modal.appendChild(submitButton);
-
-        const clearButton = document.createElement('button');
-        clearButton.style = "width: 30%; padding: 8px; cursor: pointer; background: #cc0000; color: white; border: none; border-radius: 4px; font-weight: bold; margin-left: 10px";
-        clearButton.innerText = "Clear";
-        clearButton.onclick = () => {
-            clearContents();
-        }; // Clear contents
-        modal.appendChild(clearButton);
-
-        const statusBar = document.createElement("div");
-        statusBar.id = "check-status";
-        statusBar.style = "margin-top: 8px; font-size: 13px; color: #555; font-weight: bold;";
-        statusBar.innerText = "Ready";
-
-        modal.appendChild(statusBar);
-
+        const statusBar = document.createElement('div'); statusBar.id = 'check-status'; statusBar.textContent = 'Ready';
+        statusBar.style.cssText = 'margin-top:8px;font-size:13px;color:#8b949e;font-weight:bold;'; modal.appendChild(statusBar);
         document.body.appendChild(modal);
-        console.log("Submit Scannable IDs in FROST Script Started")
-        return modal;
     }
 
     function clearContents() {
-        document.getElementById("containerIdInput").value = "";
-        document.getElementById("scannableIdsInput").value = "";
-        document.getElementById("tote-error-log-table-body").innerHTML = "";
-        successCount = 0 ;
-        failCount = 0;
-        updateStats();
-        const logContainer = document.getElementById('tote-log-container');
-        logContainer.style.display = 'none';
-        return true;
+        document.getElementById('containerIdInput').value = '';
+        document.getElementById('scannableIdsInput').value = '';
+        const body = document.getElementById('tote-error-log-table-body'); if (body) body.innerHTML = '';
+        successCount = 0; failCount = 0; updateStats();
+        const log = document.getElementById('tote-log-container'); if (log) log.style.display = 'none';
     }
 
-    function updateStats() {
-        if (statsEl) {
-          statsEl.textContent = "✅ " + successCount + " | ❌ " + failCount;
-        }
-    }
+    function updateStats() { if (statsEl) statsEl.textContent = `✅ ${successCount} | ❌ ${failCount}`; }
 
-    // Function to submit scannable IDs
     async function submitScannableIDs(scannableIDs) {
-        const status = document.getElementById('check-status');
-		const inputText = document.getElementById('scannableIdsInput');
-		const logContainer = document.getElementById('tote-log-container');
+        const inputText = document.getElementById('scannableIdsInput'); const log = document.getElementById('tote-log-container');
+        if (!scannableIDs.length) return; inputText.disabled = true; if (log) log.style.display = 'block';
         let i = 0;
-        console.log('Retrieved scannable IDs:', scannableIDs);
-
-        if (scannableIDs.length === 0) {
-            console.log('No scannable IDs were provided.');
-            return;
-        }
-
-        inputText.disabled = true;
-        if (logContainer) {
-            logContainer.style.display = 'block';
-        }
-
         for (const id of scannableIDs) {
-            //const toteId = id;
-            status.innerText = `Processing (${i + 1}/${scannableIDs.length}): ${id}`;
-            status.style.color = "blue";
-            //console.log(`Processing ID: ${id}`);
-            document.querySelector('#scannableIds').value = id; // Set ID value
-            $("#submitPnHForm").submit(); // Submit the form
-
-            // Wait for the message to change
-            const success = await waitForMessageChange(id);
-
-            // Assuming messages from the server help determine success or failure
-            const disposition = success ? "Processed" : "Stow";
-            const itemCount = success ? "1" : "0"; // Assume 1 item per ID
-
-            //addErrorLogRow(ErrorToteLogTableBody, toteId, disposition, itemCount, success);
-            ++i;
+            setStatus(`Processing (${i + 1}/${scannableIDs.length}): ${id}`, '#58a6ff');
+            document.querySelector('#scannableIds').value = id; $('#submitPnHForm').submit();
+            await waitForMessageChange(id); i++;
         }
-        status.innerText = "DONE! Batch complete.";
-        status.style.color = "green";
-		inputText.disabled = false;
+        setStatus('DONE! Batch complete.', '#3fb950'); inputText.disabled = false;
     }
 
-    // Function to wait for the #message div to change
     function waitForMessageChange(toteId) {
         ErrorToteLogTableBody = createErrorLogTable();
-        return new Promise((resolve) => {
-            const messageDiv = document.querySelector('#message');
-            const errorMessage = document.querySelector('#errorMessage');
-            const successMessage = document.querySelector('#successMessage');
-
-            // Store the original message states
-            const originalError = errorMessage.innerText;
-            const originalSuccess = successMessage.innerText;
-
-            // Polling interval
+        return new Promise(resolve => {
+            const errorMessage = document.querySelector('#errorMessage'); const successMessage = document.querySelector('#successMessage');
+            const originalError = errorMessage.innerText, originalSuccess = successMessage.innerText;
             const interval = setInterval(() => {
-                // Check for changes in either message
                 if (errorMessage.innerText !== originalError || successMessage.innerText !== originalSuccess) {
-                    clearInterval(interval); // Stop polling
-                    console.log('Message changed!'); // For debugging
-                    if (errorMessage.innerText != '') {
-						failCount++;
-					    // Check for the specific "Empty list" error message
-					    let disposition = "Stow";
-					    if (errorMessage.innerText.includes("Null / Empty list of Items")) {
-					        disposition = "Empty";
-					    }
-
-					    addErrorLogRow(ErrorToteLogTableBody, toteId, disposition, "-", 0);
-
-					    console.log(`Error Message: ${errorMessage.innerText} | Disposition: ${disposition}`);
-					    resolve(
-
-					false);
-                    } else {
-                        console.log(`Success Message: ${successMessage.innerText}`);
-                        handleSuccessMessage(successMessage.innerText);
-                    }
-                    resolve(true); // Resolve the promise
+                    clearInterval(interval);
+                    if (errorMessage.innerText) {
+                        failCount++; const disposition = errorMessage.innerText.includes('Null / Empty list of Items') ? 'Empty' : 'Stow';
+                        addErrorLogRow(ErrorToteLogTableBody, toteId, disposition, '-', false); resolve(false);
+                    } else { handleSuccessMessage(successMessage.innerText); resolve(true); }
                 }
-            }, 600); // Check every 600 milliseconds
-
-            // Optional: Set a timeout to stop polling after a certain period
-            setTimeout(() => {
-                clearInterval(interval);
-                console.log('Timeout: No change detected in the message box.');
-                resolve(); // Resolve regardless of change if timeout occurs
-            }, 10000); // Adjust the timeout as necessary (10 seconds in this case)
+            }, 600);
+            setTimeout(() => { clearInterval(interval); resolve(false); }, 10000);
         });
     }
 
     function handleSuccessMessage(message) {
-        const regex = /quantity of (\d+) for bins (tscage\d+|ts[A-Za-z0-9]+) for Destination (\w+)/;
-        const match = message.match(regex);
+        const match = message.match(/quantity of (\d+) for bins (tscage\d+|ts[A-Za-z0-9]+) for Destination (\w+)/);
         ErrorToteLogTableBody = createErrorLogTable();
-        if (match) {
-            const itemCount = parseInt(match[1], 10);
-            const toteId = match[2];
-            const disposition = match[3];
-            if (!isNaN(itemCount)) {
-				successCount++;
-                //errorProcessed = false; // Reset error processed flag on new success message
-                addErrorLogRow(ErrorToteLogTableBody, toteId, disposition, itemCount, 1);
-            }
-        } else {
-            console.info(`No match from '${message}'`);
-        }
+        if (match && !isNaN(parseInt(match[1], 10))) {
+            successCount++; addErrorLogRow(ErrorToteLogTableBody, match[2], match[3], parseInt(match[1], 10), true);
+        } else console.info(`No match from '${message}'`);
     }
 
-    // Initialize
     createModal();
-    $("#scannableIds").focus();
+    $('#scannableIds').focus();
 })();
