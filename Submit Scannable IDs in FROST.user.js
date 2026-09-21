@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Submit Scannable IDs in FROST
 // @namespace    HOU3
-// @version      1.1.23
+// @version      1.1.24
 // @author       Pedro Sanchez (pefsanch)
 // @description  Read scannable IDs from user input and submit them to a form
 // @match        https://frost-prod-jlb-iad.iad.proxy.amazon.com/packnhold/create
@@ -98,17 +98,28 @@
         }
     }
 
-    function describeEndpointResponse(response, htmlDoc) {
-        const bodyText = htmlDoc.body?.innerText?.toLowerCase() || '';
-        const title = htmlDoc.title || '';
-        if (response.status === 401 || response.status === 403 ||
-            /sign in|log in|login|access denied|unauthorized|forbidden/.test(`${title} ${bodyText}`)) {
-            return 'Authentication or permission denied. Verify SSO, VPN, and endpoint access.';
+    function getEndpointFailureReason(response, htmlDoc) {
+        const text = `${htmlDoc.title || ''} ${htmlDoc.body ? htmlDoc.body.innerText : ''}`.toLowerCase();
+
+        if (/single sign[- ]?on|sign in|log in|login|authenticate|sso/.test(text)) {
+            return 'SSO/login required for this user or endpoint.';
+        }
+        if (/access denied|unauthorized|forbidden|not authorized|permission/.test(text)) {
+            return 'Access denied. Check user permissions, VPN, and SSO.';
+        }
+        if (/proxy|gateway|temporarily unavailable|service unavailable|timeout|network/.test(text)) {
+            return 'Network/proxy issue. Verify VPN, proxy, or endpoint reachability.';
+        }
+        if (response.status === 401) {
+            return '401 Unauthorized. User is not authenticated for this HOU3 endpoint.';
+        }
+        if (response.status === 403) {
+            return '403 Forbidden. Check user access and endpoint permissions.';
         }
         if (response.status < 200 || response.status >= 300) {
             return `Endpoint returned HTTP ${response.status}.`;
         }
-        return 'The endpoint returned an unexpected page. Verify the site, container, and endpoint.';
+        return 'The endpoint returned an unexpected page. Verify the site, user access, and endpoint.';
     }
 
     async function copyToClipboard(textarea) {
@@ -119,7 +130,7 @@
     function fetchScannableIdsFromContainer(containerId) {
         setStatus(`Fetching data for container: ${containerId}`, '#58a6ff');
         if (!isAllowedEndpoint(selectedApiUrl)) {
-            setStatus('Error: Blocked endpoint configuration.', '#f85149');
+            setStatus('Error: Blocked endpoint configuration. This script only supports the HOU3 hierarchy endpoints.', '#f85149');
             console.error('Blocked endpoint:', selectedApiUrl);
             return Promise.resolve([]);
         }
@@ -135,10 +146,14 @@
                         const htmlDoc = parser.parseFromString(response.responseText, 'text/html');
                         const table = htmlDoc.querySelector('#table-container-hierarchy');
                         if (response.status < 200 || response.status >= 300 || !table) {
-                            const reason = describeEndpointResponse(response, htmlDoc);
-                            console.error('Hierarchy table missing:', { status: response.status,
-                                finalUrl: response.finalUrl || response.responseURL, title: htmlDoc.title,
-                                reason, bodyPreview: htmlDoc.body?.innerText?.slice(0, 500) });
+                            const reason = getEndpointFailureReason(response, htmlDoc);
+                            console.error('Hierarchy table missing:', {
+                                status: response.status,
+                                finalUrl: response.finalUrl || response.responseURL,
+                                title: htmlDoc.title,
+                                reason,
+                                bodyPreview: htmlDoc.body ? htmlDoc.body.innerText.slice(0, 500) : ''
+                            });
                             setStatus(`Error: ${reason}`, '#f85149');
                             resolve([]);
                             return;
@@ -222,8 +237,8 @@
     }
 
     function clearContents() {
-        document.getElementById('containerIdInput').value = '';
-        document.getElementById('scannableIdsInput').value = '';
+        const containerInput = document.getElementById('containerIdInput'); if (containerInput) containerInput.value = '';
+        const scannableInput = document.getElementById('scannableIdsInput'); if (scannableInput) scannableInput.value = '';
         const body = document.getElementById('tote-error-log-table-body'); if (body) body.innerHTML = '';
         successCount = 0; failCount = 0; updateStats();
         const log = document.getElementById('tote-log-container'); if (log) log.style.display = 'none';
