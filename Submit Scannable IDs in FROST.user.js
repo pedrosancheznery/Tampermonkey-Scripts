@@ -137,7 +137,7 @@
 
         return new Promise(resolve => {
             GM.xmlHttpRequest({
-                method: 'POST', url: selectedApiUrl, data: `s=${encodeURIComponent(containerId)}`,
+                method: 'GET', url: selectedApiUrl, data: `s=${encodeURIComponent(containerId)}`,
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 timeout: 15000,
                 onload: response => {
