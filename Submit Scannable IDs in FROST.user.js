@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Submit Scannable IDs in FROST
 // @namespace    HOU3
-// @version      1.1.24
+// @version      1.1.25
 // @author       Pedro Sanchez (pefsanch)
 // @description  Read scannable IDs from user input and submit them to a form
 // @match        https://frost-prod-jlb-iad.iad.proxy.amazon.com/packnhold/create
@@ -33,16 +33,30 @@
             border-color: #484f58 !important;
             box-shadow: 0 4px 12px rgba(0,0,0,.65) !important;
         }
-        #tote-log-container { position: fixed; bottom: 95px; left: 270px; width: 400px;
+        #tote-log-container { position: fixed; bottom: 95px; left: 270px; width: 550px;
             border: 2px solid #484f58; border-radius: 8px; font-family: sans-serif;
-            font-size: 9px; padding: 10px; overflow-y: auto; max-height: 360px; z-index: 10000; }
-        #tote-log-container h4 { margin: 0 0 10px; font-size: 12px; font-weight: bold; text-align: center; }
+            font-size: 11px; padding: 0; overflow: hidden; max-height: 400px; z-index: 10000; }
+        #tote-log-container.minimized { width: auto; min-width: 160px; max-height: none; }
+        #tote-log-header { background-color: #21262d; padding: 10px; border-bottom: 2px solid #484f58;
+            display: flex; justify-content: space-between; align-items: center; cursor: default; }
+        #tote-log-header h4 { margin: 0; font-size: 12px; font-weight: bold; color: #58a6ff; flex: 1; }
+        #tote-log-minimize-btn { background-color: #238636; color: white; border: none; padding: 4px 10px;
+            border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 10px; margin-right: 5px; }
+        #tote-log-minimize-btn:hover { background-color: #2ea043; }
+        #tote-log-minimize-btn.restore { background-color: #8957e5; }
+        #tote-log-minimize-btn.restore:hover { background-color: #a371f7; }
+        #tote-log-content { padding: 10px; overflow-y: auto; max-height: 355px; }
+        #tote-log-container.minimized #tote-log-content { display: none; }
         #tote-error-log-table { width: 100%; border-collapse: collapse; }
         #tote-error-log-table th, #tote-error-log-table td { border: 1px solid #30363d;
-            padding: 8px; text-align: left; font-size: 9px; }
-        #tote-error-log-table thead tr { background-color: #21262d; color: #58a6ff; }
+            padding: 10px; text-align: left; font-size: 11px; }
+        #tote-error-log-table thead tr { background-color: #21262d; color: #58a6ff; font-weight: bold; }
         #tote-error-log-table tbody tr:nth-child(even) { background-color: #1c2128; }
         #tote-error-log-table tbody tr:nth-child(odd) { background-color: #161b22; }
+        #tote-error-log-table tbody tr:hover { background-color: #2d333b; }
+        #tote-error-log-table td:first-child { color: #58a6ff; font-weight: 600; }
+        #tote-error-log-table td:nth-child(2) { color: #79c0ff; }
+        #tote-error-log-table td:nth-child(4) { font-weight: bold; text-align: center; }
         .api-url-selector { margin-bottom: 8px; font-size: 10px; }
         .api-url-selector label { display: flex; align-items: center; margin-bottom: 4px; cursor: pointer; }
         .api-url-selector input[type="radio"] { margin-right: 6px; cursor: pointer; }
@@ -53,8 +67,11 @@
         #inputModal input::placeholder, #inputModal textarea::placeholder { color: #8b949e !important; }
         #inputModal button { color: #fff !important; border: 1px solid #484f58 !important; }
         #inputModal button:first-of-type { background: #8957e5 !important; }
+        #inputModal button:first-of-type:hover { background: #a371f7 !important; }
         #inputModal button:nth-last-of-type(2) { background: #238636 !important; }
+        #inputModal button:nth-last-of-type(2):hover { background: #2ea043 !important; }
         #inputModal button:last-of-type { background: #da3633 !important; }
+        #inputModal button:last-of-type:hover { background: #f85149 !important; }
         #check-status { color: #8b949e !important; }
     `);
 
@@ -63,11 +80,33 @@
         if (existing) return existing.querySelector('tbody');
         const logContainer = document.createElement('div');
         logContainer.id = 'tote-log-container';
-        logContainer.innerHTML = `<h4>Tote History</h4><table id="tote-error-log-table">
-            <thead><tr><th>Tote ID</th><th>Disposition</th><th>Items</th><th>Status</th></tr></thead>
-            <tbody id="tote-error-log-table-body"></tbody></table>`;
+        logContainer.innerHTML = `
+            <div id="tote-log-header">
+                <h4>📊 Tote History</h4>
+                <button id="tote-log-minimize-btn">Minimize</button>
+            </div>
+            <div id="tote-log-content">
+                <table id="tote-error-log-table">
+                    <thead><tr><th>Tote ID</th><th>Disposition</th><th>Items</th><th>Status</th></tr></thead>
+                    <tbody id="tote-error-log-table-body"></tbody>
+                </table>
+            </div>
+        `;
         document.body.appendChild(logContainer);
+
+        const minimizeBtn = document.getElementById('tote-log-minimize-btn');
+        minimizeBtn.addEventListener('click', toggleMinimize);
+
         return logContainer.querySelector('tbody');
+    }
+
+    function toggleMinimize(event) {
+        const logContainer = document.getElementById('tote-log-container');
+        const minimizeBtn = document.getElementById('tote-log-minimize-btn');
+
+        logContainer.classList.toggle('minimized');
+        minimizeBtn.classList.toggle('restore');
+        minimizeBtn.textContent = minimizeBtn.classList.contains('restore') ? 'Restore' : 'Minimize';
     }
 
     function addErrorLogRow(tableBody, id, disposition, itemCount, isSuccess) {
