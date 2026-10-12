@@ -73,6 +73,9 @@
         #inputModal-minimize-btn.restore:hover { background-color: #a371f7; }
         #inputModal-content { padding: 15px; }
         #inputModal.minimized #inputModal-content { display: none; }
+        #inputModal.minimized #inputModal-header { padding: 6px 10px; border-bottom: none; }
+        #inputModal.minimized #inputModal-header h4 { font-size: 11px; }
+        #inputModal.minimized #inputModal-minimize-btn { padding: 3px 8px; font-size: 9px; }
         #inputModal input, #inputModal textarea { color: #e6edf3 !important; background: #0d1117 !important;
             border: 1px solid #484f58 !important; }
         #inputModal input::placeholder, #inputModal textarea::placeholder { color: #8b949e !important; }
