@@ -26,37 +26,37 @@
         // Container
         const container = document.createElement('div');
         container.id = 'tm-pnp-automation';
-        container.style = "position: fixed; bottom: 50px; left: 10px; z-index: 9999; background: white; border: 2px solid #232f3e; padding: 10px; border-radius: 4px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 300px; font-family: Arial, sans-serif; font-size: 13px;";
+        container.style = "position: fixed; bottom: 50px; left: 10px; z-index: 9999; background: #1e1e1e; border: 2px solid #404040; padding: 10px; border-radius: 4px; box-shadow: 0 4px 6px rgba(0,0,0,0.5); width: 300px; font-family: Arial, sans-serif; font-size: 13px; color: #e0e0e0;";
 
         // PAX label/input
         const label2 = document.createElement('label');
         label2.innerText = "PAX Label:";
-        label2.style = "display: block; font-weight: bold; margin-bottom: 5px;";
+        label2.style = "display: block; font-weight: bold; margin-bottom: 5px; color: #e0e0e0;";
         const paxInput = document.createElement('input');
         paxInput.id = "pax-input";
-        paxInput.style = "width: 100%; margin-bottom: 8px; padding: 6px; box-sizing: border-box;";
+        paxInput.style = "width: 100%; margin-bottom: 8px; padding: 6px; box-sizing: border-box; background: #2d2d2d; color: #e0e0e0; border: 1px solid #404040; border-radius: 3px;";
 
         // Alt PAX label/input
         const label3 = document.createElement('label');
         label3.innerText = "Alternative PAX Label:";
-        label3.style = "display: block; font-weight: bold; margin-bottom: 5px;";
+        label3.style = "display: block; font-weight: bold; margin-bottom: 5px; color: #e0e0e0;";
         const altpaxInput = document.createElement('input');
         altpaxInput.id = "alt-pax-input";
-        altpaxInput.style = "width: 100%; margin-bottom: 8px; padding: 6px; box-sizing: border-box;";
+        altpaxInput.style = "width: 100%; margin-bottom: 8px; padding: 6px; box-sizing: border-box; background: #2d2d2d; color: #e0e0e0; border: 1px solid #404040; border-radius: 3px;";
         //altpaxInput.disabled = true;
 
         // IDs textarea
         const label1 = document.createElement('label');
         label1.innerText = "Paste IDs (One per line):";
-        label1.style = "display: block; font-weight: bold; margin-bottom: 5px;";
+        label1.style = "display: block; font-weight: bold; margin-bottom: 5px; color: #e0e0e0;";
         const textarea = document.createElement('textarea');
         textarea.id = "pnp-batch-input";
-        textarea.style = "width: 100%; height: 120px; margin-bottom: 10px; font-family: monospace; box-sizing: border-box; padding:6px;";
+        textarea.style = "width: 100%; height: 120px; margin-bottom: 10px; font-family: monospace; box-sizing: border-box; padding:6px; background: #2d2d2d; color: #e0e0e0; border: 1px solid #404040; border-radius: 3px;";
         textarea.placeholder = "TOTE123\nPKG456...";
 
         // Delay controls
         const delayWrapper = document.createElement('div');
-        delayWrapper.style = "display:flex;gap:8px;align-items:center;margin-bottom:8px;";
+        delayWrapper.style = "display:flex;gap:8px;align-items:center;margin-bottom:8px; color: #e0e0e0;";
         const delayCheckbox = document.createElement('input');
 
         delayCheckbox.type = 'checkbox';
@@ -66,14 +66,14 @@
 
         delayLabel.htmlFor = 'delay-enable-checkbox';
         delayLabel.innerText = 'Delay (s):';
-        delayLabel.style = "font-weight: bold;";
+        delayLabel.style = "font-weight: bold; color: #e0e0e0;";
 
         const delaySecondsInput = document.createElement('input');
         delaySecondsInput.type = 'number';
         delaySecondsInput.id = 'delay-seconds-input';
         delaySecondsInput.min = '0';
         delaySecondsInput.value = '1';
-        delaySecondsInput.style = "width: 60px; padding:4px; box-sizing:border-box;";
+        delaySecondsInput.style = "width: 60px; padding:4px; box-sizing:border-box; background: #2d2d2d; color: #e0e0e0; border: 1px solid #404040; border-radius: 3px;";
         delayWrapper.appendChild(delayCheckbox);
         delayWrapper.appendChild(delayLabel);
         delayWrapper.appendChild(delaySecondsInput);
@@ -82,33 +82,33 @@
         const btn = document.createElement('button');
         btn.id = 'tm-process-button';
         btn.innerText = "▶ Process";
-        btn.style = "width: 100%; padding: 10px; background-color: #28a745; color: white; border: none; cursor: pointer; font-weight: bold; border-radius: 4px;";
+        btn.style = "width: 100%; padding: 10px; background-color: #2e7d32; color: white; border: none; cursor: pointer; font-weight: bold; border-radius: 4px;";
 
         statsEl = document.createElement("div");
-        statsEl.style = "font-size:12px;color:#888;margin-bottom:14px;";
+        statsEl.style = "font-size:12px;color:#a0a0a0;margin-bottom:14px;";
         statsEl.innerText = "✅ 0 | ❌ 0";
 
         // Status
         const statusDiv = document.createElement('div');
         statusDiv.id = "check-status";
         statusDiv.innerText = "Ready";
-        statusDiv.style = "margin-top: 8px; font-size: 12px; color: #555; font-weight: bold;";
+        statusDiv.style = "margin-top: 8px; font-size: 12px; color: #888; font-weight: bold;";
 
         // Unprocessed Totes heading + table
         const unprocessedDiv = document.createElement('div');
         unprocessedDiv.id = "unprocessed-div";
-        unprocessedDiv.style = "background:white;border:2px solid rgb(35, 47, 62);border-radius:4px;box-shadow:rgba(0, 0, 0, 0.1) 0px 4px 6px;font-family:Arial, sans-serif;font-size:13px;height:465px;position:fixed;bottom:50px;left:310px;margin-top:10px;overflow-y:auto;font-weight:bold;width:300px;display:none;";
+        unprocessedDiv.style = "background: #1e1e1e; border: 2px solid #404040; border-radius: 4px; box-shadow: rgba(0, 0, 0, 0.5) 0px 4px 6px; font-family: Arial, sans-serif; font-size: 13px; height: 465px; width: 350px; position: fixed; bottom: 50px; right: 10px; z-index: 9998; display: none; flex-direction: column; padding: 10px; color: #e0e0e0;";
         const unprocessedHeading = document.createElement('div');
         unprocessedHeading.id = "unprocessed-heading";
         unprocessedHeading.innerText = "Unprocessed Totes";
-        //unprocessedHeading.style = "margin-top:10px;font-weight:bold;";
+        unprocessedHeading.style = "color: #e0e0e0; font-weight: bold; margin-bottom: 8px;";
         const unprocessedTableDiv = document.createElement('div');
         unprocessedTableDiv.id = "unprocessed-table-div";
-        //unprocessedTableDiv.style = "max-height: 250px; overflow-y: auto";
+        unprocessedTableDiv.style = "overflow-y: auto; flex: 1;";
         const unprocessedTable = document.createElement('table');
         unprocessedTable.id = "unprocessed-totes-table";
-        unprocessedTable.style = "width:100%;border-collapse:collapse;margin-top:6px;font-size:12px;border:1px solid #ddd;";
-        unprocessedTable.innerHTML = '<thead><tr><th style="border:1px solid #ddd;padding:4px;text-align:left">Tote</th><th style="border:1px solid #ddd;padding:4px;text-align:left">Reason</th></tr></thead><tbody></tbody>';
+        unprocessedTable.style = "width:100%;border-collapse:collapse;margin-top:6px;font-size:12px;border:1px solid #404040; color: #e0e0e0;";
+        unprocessedTable.innerHTML = '<thead><tr><th style="border:1px solid #404040;padding:4px;text-align:left;background:#2d2d2d;color:#e0e0e0">Tote</th><th style="border:1px solid #404040;padding:4px;text-align:left;background:#2d2d2d;color:#e0e0e0">Reason</th></tr></thead><tbody></tbody>';
 
         // Append elements
         container.appendChild(label2);
@@ -139,13 +139,13 @@
     // --- Utility: log unprocessed tote ---
     function logUnprocessedTote(toteId, reason) {
         const table = document.getElementById('unprocessed-totes-table');
-        const unprocessedDiv = document.getElementById('unprocessed-div'); //unprocessed-div
+        const unprocessedDiv = document.getElementById('unprocessed-div');
         unprocessedDiv.style.display = 'block';
 
         if (!table) return;
         const tbody = table.querySelector('tbody');
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td style="border:1px solid #ddd;padding:4px">${escapeHtml(toteId)}</td><td style="border:1px solid #ddd;padding:4px">${escapeHtml(reason)}</td>`;
+        tr.innerHTML = `<td style="border:1px solid #404040;padding:4px;color:#e0e0e0;background:#1f1f1f">${escapeHtml(toteId)}</td><td style="border:1px solid #404040;padding:4px;color:#e0e0e0;background:#1f1f1f">${escapeHtml(reason)}</td>`;
         tbody.appendChild(tr);
     }
 
@@ -444,7 +444,7 @@
             const reasonPatterns = [
                 /Error\s+is\b[^:]*:\s*(Container is empty)/i,
                 /status\s+is\s*(PALLETIZED)/i,
-                /\b(PNH)\b(?=\s+container)/ // Your new PNH regex
+                /\b(PNH)\b(?=\s+container)/
             ];
 
             let reason = "";
