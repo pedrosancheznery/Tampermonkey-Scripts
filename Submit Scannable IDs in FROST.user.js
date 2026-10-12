@@ -60,8 +60,19 @@
         .api-url-selector { margin-bottom: 8px; font-size: 10px; }
         .api-url-selector label { display: flex; align-items: center; margin-bottom: 4px; cursor: pointer; }
         .api-url-selector input[type="radio"] { margin-right: 6px; cursor: pointer; }
-        #inputModal { position: fixed; bottom: 95px; left: 10px; padding: 15px; width: 260px;
+        #inputModal { position: fixed; bottom: 95px; left: 10px; padding: 0; width: 260px;
             border: 2px solid #484f58; border-radius: 8px; font-family: sans-serif; z-index: 9999; }
+        #inputModal.minimized { width: auto; min-width: 160px; }
+        #inputModal-header { background-color: #21262d; padding: 10px; border-bottom: 2px solid #484f58;
+            display: flex; justify-content: space-between; align-items: center; cursor: default; }
+        #inputModal-header h4 { margin: 0; font-size: 12px; font-weight: bold; color: #58a6ff; flex: 1; }
+        #inputModal-minimize-btn { background-color: #238636; color: white; border: none; padding: 4px 10px;
+            border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 10px; margin-right: 0; }
+        #inputModal-minimize-btn:hover { background-color: #2ea043; }
+        #inputModal-minimize-btn.restore { background-color: #8957e5; }
+        #inputModal-minimize-btn.restore:hover { background-color: #a371f7; }
+        #inputModal-content { padding: 15px; }
+        #inputModal.minimized #inputModal-content { display: none; }
         #inputModal input, #inputModal textarea { color: #e6edf3 !important; background: #0d1117 !important;
             border: 1px solid #484f58 !important; }
         #inputModal input::placeholder, #inputModal textarea::placeholder { color: #8b949e !important; }
@@ -105,6 +116,15 @@
         const minimizeBtn = document.getElementById('tote-log-minimize-btn');
 
         logContainer.classList.toggle('minimized');
+        minimizeBtn.classList.toggle('restore');
+        minimizeBtn.textContent = minimizeBtn.classList.contains('restore') ? 'Restore' : 'Minimize';
+    }
+
+    function toggleModalMinimize(event) {
+        const modal = document.getElementById('inputModal');
+        const minimizeBtn = document.getElementById('inputModal-minimize-btn');
+
+        modal.classList.toggle('minimized');
         minimizeBtn.classList.toggle('restore');
         minimizeBtn.textContent = minimizeBtn.classList.contains('restore') ? 'Restore' : 'Minimize';
     }
@@ -234,12 +254,21 @@
     function createModal() {
         const modal = document.createElement('div');
         modal.id = 'inputModal';
-        modal.innerHTML = `<b style="display:block;margin-bottom:5px;">Tote Pack And Hold</b>
-            <div style="font-size:10px;margin-bottom:2px;font-weight:bold;">Container ID:</div>`;
+        modal.innerHTML = `
+            <div id="inputModal-header">
+                <h4>Tote Pack And Hold</h4>
+                <button id="inputModal-minimize-btn">Minimize</button>
+            </div>
+            <div id="inputModal-content">
+                <div style="font-size:10px;margin-bottom:2px;font-weight:bold;">Container ID:</div>
+            </div>
+        `;
+
+        const contentDiv = modal.querySelector('#inputModal-content');
         const containerInput = document.createElement('input');
         containerInput.id = 'containerIdInput'; containerInput.type = 'text'; containerInput.placeholder = 'e.g., paXPBT2JQYZ';
         Object.assign(containerInput.style, { width: '100%', padding: '6px', marginBottom: '8px', boxSizing: 'border-box' });
-        modal.appendChild(containerInput);
+        contentDiv.appendChild(containerInput);
 
         const selector = document.createElement('div'); selector.className = 'api-url-selector';
         selector.innerHTML = '<div style="font-size:10px;margin-bottom:4px;font-weight:bold;">API Endpoint:</div>';
@@ -249,30 +278,33 @@
             radio.onchange = () => { if (radio.checked) selectedApiUrl = radio.value; };
             label.append(radio, document.createTextNode(new URL(url).hostname)); selector.appendChild(label);
         });
-        modal.appendChild(selector);
+        contentDiv.appendChild(selector);
 
         const containerButton = document.createElement('button'); containerButton.textContent = 'Container';
         containerButton.style.cssText = 'width:100%;padding:10px;cursor:pointer;background:#8957e5;color:white;border:none;border-radius:4px;font-weight:bold;margin-bottom:8px;';
         containerButton.onclick = async () => {
             if (!containerInput.value.trim()) { alert('Please enter a container ID'); return; }
             clearContents(); await fetchScannableIdsFromContainer(containerInput.value.trim());
-        }; modal.appendChild(containerButton);
+        }; contentDiv.appendChild(containerButton);
 
         const input = document.createElement('textarea'); input.id = 'scannableIdsInput'; input.placeholder = 'Enter Scannable IDs (one per line):';
-        input.style.cssText = 'width:100%;height:120px;box-sizing:border-box;'; modal.appendChild(input);
+        input.style.cssText = 'width:100%;height:120px;box-sizing:border-box;'; contentDiv.appendChild(input);
         statsEl = document.createElement('div'); statsEl.style.cssText = 'font-size:12px;color:#8b949e;margin:14px 0;';
-        statsEl.textContent = '✅ 0 | ❌ 0'; modal.appendChild(statsEl);
+        statsEl.textContent = '✅ 0 | ❌ 0'; contentDiv.appendChild(statsEl);
 
         const submitButton = document.createElement('button'); submitButton.textContent = '▶ Process';
         submitButton.style.cssText = 'width:60%;padding:8px;cursor:pointer;background:#238636;color:white;border:none;border-radius:4px;font-weight:bold;';
-        submitButton.onclick = () => submitScannableIDs(input.value.split('\n').map(id => id.trim()).filter(Boolean)); modal.appendChild(submitButton);
+        submitButton.onclick = () => submitScannableIDs(input.value.split('\n').map(id => id.trim()).filter(Boolean)); contentDiv.appendChild(submitButton);
         const clearButton = document.createElement('button'); clearButton.textContent = 'Clear';
         clearButton.style.cssText = 'width:30%;padding:8px;cursor:pointer;background:#da3633;color:white;border:none;border-radius:4px;font-weight:bold;margin-left:10px;';
-        clearButton.onclick = clearContents; modal.appendChild(clearButton);
+        clearButton.onclick = clearContents; contentDiv.appendChild(clearButton);
 
         const statusBar = document.createElement('div'); statusBar.id = 'check-status'; statusBar.textContent = 'Ready';
-        statusBar.style.cssText = 'margin-top:8px;font-size:13px;color:#8b949e;font-weight:bold;'; modal.appendChild(statusBar);
+        statusBar.style.cssText = 'margin-top:8px;font-size:13px;color:#8b949e;font-weight:bold;'; contentDiv.appendChild(statusBar);
         document.body.appendChild(modal);
+
+        const minimizeBtn = document.getElementById('inputModal-minimize-btn');
+        minimizeBtn.addEventListener('click', toggleModalMinimize);
     }
 
     function clearContents() {
