@@ -20,6 +20,8 @@
     let statsEl;
     let successCount = 0;
     let failCount = 0;
+    let isMinimized = false;
+    let fullContent = null;
 
     // --- UI creation ---
     function createUI() {
@@ -27,6 +29,36 @@
         const container = document.createElement('div');
         container.id = 'tm-pnp-automation';
         container.style = "position: fixed; bottom: 50px; left: 10px; z-index: 9999; background: #1e1e1e; border: 2px solid #404040; padding: 10px; border-radius: 4px; box-shadow: 0 4px 6px rgba(0,0,0,0.5); width: 300px; font-family: Arial, sans-serif; font-size: 13px; color: #e0e0e0;";
+
+        // Header with title and minimize/restore buttons
+        const headerDiv = document.createElement('div');
+        headerDiv.style = "display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;";
+        
+        const titleSpan = document.createElement('span');
+        titleSpan.innerText = "PNP Automation";
+        titleSpan.style = "font-weight: bold; color: #e0e0e0;";
+        
+        const buttonGroup = document.createElement('div');
+        buttonGroup.style = "display: flex; gap: 5px;";
+        
+        const minimizeBtn = document.createElement('button');
+        minimizeBtn.id = 'tm-minimize-button';
+        minimizeBtn.innerText = "−";
+        minimizeBtn.style = "width: 24px; height: 24px; padding: 0; background-color: #404040; color: #e0e0e0; border: 1px solid #505050; cursor: pointer; font-weight: bold; border-radius: 3px;";
+        
+        const restoreBtn = document.createElement('button');
+        restoreBtn.id = 'tm-restore-button';
+        restoreBtn.innerText = "□";
+        restoreBtn.style = "width: 24px; height: 24px; padding: 0; background-color: #404040; color: #e0e0e0; border: 1px solid #505050; cursor: pointer; font-weight: bold; border-radius: 3px; display: none;";
+        
+        buttonGroup.appendChild(minimizeBtn);
+        buttonGroup.appendChild(restoreBtn);
+        headerDiv.appendChild(titleSpan);
+        headerDiv.appendChild(buttonGroup);
+
+        // Content wrapper
+        const contentWrapper = document.createElement('div');
+        contentWrapper.id = 'tm-content-wrapper';
 
         // PAX label/input
         const label2 = document.createElement('label');
@@ -43,7 +75,6 @@
         const altpaxInput = document.createElement('input');
         altpaxInput.id = "alt-pax-input";
         altpaxInput.style = "width: 100%; margin-bottom: 8px; padding: 6px; box-sizing: border-box; background: #2d2d2d; color: #e0e0e0; border: 1px solid #404040; border-radius: 3px;";
-        //altpaxInput.disabled = true;
 
         // IDs textarea
         const label1 = document.createElement('label');
@@ -94,6 +125,25 @@
         statusDiv.innerText = "Ready";
         statusDiv.style = "margin-top: 8px; font-size: 12px; color: #888; font-weight: bold;";
 
+        // Append elements to content wrapper
+        contentWrapper.appendChild(label2);
+        contentWrapper.appendChild(paxInput);
+        contentWrapper.appendChild(label3);
+        contentWrapper.appendChild(altpaxInput);
+        contentWrapper.appendChild(delayWrapper);
+        contentWrapper.appendChild(label1);
+        contentWrapper.appendChild(textarea);
+        contentWrapper.appendChild(statsEl);
+        contentWrapper.appendChild(btn);
+        contentWrapper.appendChild(statusDiv);
+
+        // Append header and content to main container
+        container.appendChild(headerDiv);
+        container.appendChild(contentWrapper);
+
+        // Store full content for restore
+        fullContent = contentWrapper;
+
         // Unprocessed Totes heading + table
         const unprocessedDiv = document.createElement('div');
         unprocessedDiv.id = "unprocessed-div";
@@ -110,17 +160,6 @@
         unprocessedTable.style = "width:100%;border-collapse:collapse;margin-top:6px;font-size:12px;border:1px solid #404040; color: #e0e0e0;";
         unprocessedTable.innerHTML = '<thead><tr><th style="border:1px solid #404040;padding:4px;text-align:left;background:#2d2d2d;color:#e0e0e0">Tote</th><th style="border:1px solid #404040;padding:4px;text-align:left;background:#2d2d2d;color:#e0e0e0">Reason</th></tr></thead><tbody></tbody>';
 
-        // Append elements
-        container.appendChild(label2);
-        container.appendChild(paxInput);
-        container.appendChild(label3);
-        container.appendChild(altpaxInput);
-        container.appendChild(delayWrapper);
-        container.appendChild(label1);
-        container.appendChild(textarea);
-        container.appendChild(statsEl);
-        container.appendChild(btn);
-        container.appendChild(statusDiv);
         unprocessedTableDiv.appendChild(unprocessedTable);
         unprocessedHeading.appendChild(unprocessedTableDiv);
         unprocessedDiv.appendChild(unprocessedHeading);
@@ -132,6 +171,26 @@
             await handleProcessClick(textarea, paxInput, statusDiv);
         });
 
+        // Minimize button functionality
+        minimizeBtn.addEventListener('click', () => {
+            isMinimized = true;
+            contentWrapper.style.display = 'none';
+            minimizeBtn.style.display = 'none';
+            restoreBtn.style.display = 'block';
+            container.style.width = 'auto';
+            container.style.padding = '8px';
+        });
+
+        // Restore button functionality
+        restoreBtn.addEventListener('click', () => {
+            isMinimized = false;
+            contentWrapper.style.display = 'block';
+            minimizeBtn.style.display = 'block';
+            restoreBtn.style.display = 'none';
+            container.style.width = '300px';
+            container.style.padding = '10px';
+        });
+
         // Start observing for error modals
         startErrorObserver();
     }
@@ -140,7 +199,7 @@
     function logUnprocessedTote(toteId, reason) {
         const table = document.getElementById('unprocessed-totes-table');
         const unprocessedDiv = document.getElementById('unprocessed-div');
-        unprocessedDiv.style.display = 'block';
+        unprocessedDiv.style.display = 'flex';
 
         if (!table) return;
         const tbody = table.querySelector('tbody');
